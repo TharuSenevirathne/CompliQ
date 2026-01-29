@@ -9,7 +9,7 @@ export default function Index() {
   useEffect(() => {
     const timer = setTimeout(() => {
       router.replace("/(auth)/login")
-    }, 5000)
+    }, 6000)
 
     return () => clearTimeout(timer)
   }, [])
@@ -20,7 +20,7 @@ export default function Index() {
       <View className="items-center mb-10">
         <Text className="text-6xl font-bold text-white mb-2">Compli-Q</Text>
         <Text className="text-blue-500 text-lg tracking-widest">
-          The best way to manage compliance !!
+          The best way to manage compliance 💕
         </Text>
       </View>
 

@@ -45,7 +45,7 @@ const Login = () => {
             className="px-6 py-4 rounded-xl mb-4"
             style={{ backgroundColor: "#0356fc" }}
             onPress={() => {
-              router.replace("/home")
+              router.replace("/(dashboard)/home")
             }}
           >
             <Text className="text-white text-lg text-center font-semibold">

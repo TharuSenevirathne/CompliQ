@@ -4,6 +4,7 @@ import { useRouter } from "expo-router"
 
 const Register = () => {
   const router = useRouter()
+  
   return (
     <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
       <View className="flex-1 justify-center items-center bg-black p-6">

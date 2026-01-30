@@ -24,7 +24,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       hideLoader()
     })
 
-    // cleanup function (component unmount)
     return () => unsucribe()
   }, [])
 

@@ -1,9 +1,42 @@
-import { View,Text,TextInput,Pressable,TouchableOpacity,TouchableWithoutFeedback,Keyboard} from "react-native"
+import { View,Text,TextInput,Pressable,TouchableOpacity,TouchableWithoutFeedback,Keyboard,Alert } from "react-native"
 import React from "react"
 import { useRouter } from "expo-router"
+import  { useState } from "react"
+import { useLoader } from "@/hooks/useLoader"
+import { login } from "@/services/authService"
 
+// Login Screen Component
 const Login = () => {
   const router = useRouter()
+
+  const [email, setEmail] = useState("")
+  const [password, setPassword] = useState("")
+  const { showLoader, hideLoader, isLoading } = useLoader()
+
+  // Handle Login Button Press
+  const handleLogin = async () => {
+    if (!email || !password || isLoading) {
+      Alert.alert("Please enter email and password..!!")
+      return
+    }
+
+    
+    showLoader()
+    try {
+      await login(email, password)
+      router.replace("/(dashboard)/userHome");
+    } catch (err) {
+      if (err instanceof Error) {
+        Alert.alert("Login failed: " + err.message)
+      } else {
+        Alert.alert("Login failed. Please try again.")
+      }
+      console.error('Login error:', err)
+    } finally {
+      hideLoader()
+    }
+}
+
   return (
     <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
       <View className="flex-1 justify-center items-center bg-black p-6">
@@ -30,6 +63,8 @@ const Login = () => {
             className="border-2 border-gray-200 bg-gray-50 p-4 mb-4 rounded-xl text-black"
             keyboardType="email-address"
             autoCapitalize="none"
+            value={email}
+            onChangeText={setEmail}
           />
 
           {/* Password Input */}
@@ -38,15 +73,15 @@ const Login = () => {
             placeholderTextColor="#9CA3AF"
             className="border-2 border-gray-200 bg-gray-50 p-4 mb-6 rounded-xl text-black"
             secureTextEntry
+            value={password}
+            onChangeText={setPassword}
           />
 
           {/* Login Button */}
           <Pressable
             className="px-6 py-4 rounded-xl mb-4"
             style={{ backgroundColor: "#0356fc" }}
-            onPress={() => {
-              router.replace("/(dashboard)/home")
-            }}
+            onPress={handleLogin}
           >
             <Text className="text-white text-lg text-center font-semibold">
               Login

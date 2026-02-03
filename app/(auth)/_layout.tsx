@@ -1,6 +1,7 @@
 import React from "react"
 import { Stack } from "expo-router"
 
+// Layout for authentication screens: login and register
 const AuthLayout = () => {
   return (
     <Stack

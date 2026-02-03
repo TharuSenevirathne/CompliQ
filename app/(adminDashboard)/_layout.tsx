@@ -12,7 +12,7 @@ const tabs = [
 ] as const
 
 // DashboardLayout component that sets up the tab navigation
-const DashboardLayout = () => {
+const AdminLayout = () => {
   return (
     <Tabs
       screenOptions={{
@@ -33,4 +33,4 @@ const DashboardLayout = () => {
   )
 }
 
-export default DashboardLayout
+export default AdminLayout

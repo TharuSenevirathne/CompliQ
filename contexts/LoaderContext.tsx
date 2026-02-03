@@ -1,18 +1,21 @@
 import React, { createContext, useState, ReactNode } from "react"
 import { View, ActivityIndicator } from "react-native"
 
+// Define the shape of the LoaderContext
 interface LoaderContextProps {
   showLoader: () => void
   hideLoader: () => void
   isLoading: boolean
 }
 
+// Create the LoaderContext with default values
 export const LoaderContext = createContext<LoaderContextProps>({
   showLoader: () => {},
   hideLoader: () => {},
   isLoading: false
 })
 
+// LoaderProvider component to wrap the app and provide loader state
 export const LoaderProvider = ({ children }: { children: ReactNode }) => {
   const [isLoading, setIsLoading] = useState(false)
 

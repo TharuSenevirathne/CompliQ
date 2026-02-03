@@ -1,4 +1,4 @@
-import { View, Text, ActivityIndicator } from "react-native";
+import { View, Text, ActivityIndicator,Alert } from "react-native";
 import { useEffect, useState } from "react";
 import { useRouter } from "expo-router";
 import { useAuth } from "@/hooks/useAuth";
@@ -22,30 +22,53 @@ export default function Index() {
   }, []);
 
   useEffect(() => {
+    console.log("Auth state:", { user, loading });
     // Until the splash screen is shown or auth state is loading, don't redirect
     if (showSplash || loading) return;
 
-    const redirectUser = async () => {
-      if (user) {
-        try {
-          const userDoc = await getDoc(doc(db, "users", user.uid));
-          const userData = userDoc.data();
+const redirectUser = async () => {
+  if (!user) {
+    console.log("→ No user → go to login");
+    router.replace("/(auth)/login");
+    return;
+  }
 
-          console.log("Current Firebase User:", user);
+  console.log("→ User logged in. UID:", user.uid);
+  console.log("→ Email:", user.email);
 
-          if (userData?.role === "admin") {
-            router.replace("/(admin)/adminHome");
-          } else {
-            router.replace("/(dashboard)/userHome"); 
-          }
-        } catch (err) {
-          console.error("Error fetching user role:", err);
-          router.replace("/(auth)/login");
-        }
+  try {
+    const userDocRef = doc(db, "users", user.uid);
+    console.log("→ Querying document path:", `users/${user.uid}`);
+
+    const userDocSnap = await getDoc(userDocRef);
+
+    console.log("→ Document exists?", userDocSnap.exists());
+
+    if (userDocSnap.exists()) {
+      const userData = userDocSnap.data();
+      console.log("→ Full Firestore data:", userData);
+      console.log("→ Role found:", userData?.role);
+
+      if (userData?.role === "admin") {
+        console.log("→ Role is admin → redirecting to adminHome");
+        router.replace("/(adminDashboard)/adminHome");
+      } else if (userData?.role === "user") {
+        console.log("→ Role is user → redirecting to userHome");
+        router.replace("/(dashboard)/userHome");
       } else {
+        console.log("→ Unknown role:", userData?.role);
         router.replace("/(auth)/login");
       }
-    };
+    } else {
+      console.log("→ No document found for this UID in 'users' collection");
+      router.replace("/(auth)/login");
+    }
+  } catch (err) {
+    console.error("→ Firestore fetch error:", err);
+    Alert.alert("Error", "Failed to check user role");
+    router.replace("/(auth)/login");
+  }
+};
 
     redirectUser();
   }, [user, loading, showSplash, router]);

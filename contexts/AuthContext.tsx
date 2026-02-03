@@ -21,14 +21,23 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User | null>(null)
 
   useEffect(() => {
-    showLoader()
-    const unsucribe = onAuthStateChanged(auth, (usr) => {
-      setUser(usr)
-      hideLoader()
-    })
+    console.log("AuthProvider: Starting onAuthStateChanged listener");
 
-    return () => unsucribe()
-  }, [])
+    showLoader();
+
+    const unsubscribe = onAuthStateChanged(auth, (usr) => {
+      console.log("onAuthStateChanged FIRED → user:", usr ? usr.email : "null");
+      console.log("onAuthStateChanged FIRED → UID:", usr ? usr.uid : "null");
+
+      setUser(usr);
+      hideLoader();
+    });
+
+    return () => {
+      console.log("AuthProvider: Cleaning up onAuthStateChanged");
+      unsubscribe();
+    };
+  }, []);
 
   return (
     <AuthContext.Provider value={{ user, loading: isLoading }}>

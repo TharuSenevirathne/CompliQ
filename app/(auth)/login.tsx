@@ -4,6 +4,8 @@ import { useRouter } from "expo-router"
 import  { useState } from "react"
 import { useLoader } from "@/hooks/useLoader"
 import { login } from "@/services/authService"
+import { doc, getDoc } from "firebase/firestore"
+import { db } from "@/services/firebase"
 
 // Login Screen Component
 const Login = () => {
@@ -14,28 +16,52 @@ const Login = () => {
   const { showLoader, hideLoader, isLoading } = useLoader()
 
   // Handle Login Button Press
-  const handleLogin = async () => {
-    if (!email || !password || isLoading) {
-      Alert.alert("Please enter email and password..!!")
-      return
-    }
+const handleLogin = async () => {
+  if (!email || !password || isLoading) {
+    Alert.alert("Please enter email and password..!!");
+    return;
+  }
 
-    
-    showLoader()
-    try {
-      await login(email, password)
-      router.replace("/(dashboard)/userHome");
-    } catch (err) {
-      if (err instanceof Error) {
-        Alert.alert("Login failed: " + err.message)
+  showLoader();
+  try {
+    const userCredential = await login(email, password);
+    const currentUser = userCredential.user;
+
+    console.log("Login success - UID:", currentUser.uid);
+    console.log("Login success - Email:", currentUser.email);
+
+    // check user role from Firestore
+    const userDocRef = doc(db, "users", currentUser.uid);
+    const userDocSnap = await getDoc(userDocRef);
+
+    if (userDocSnap.exists()) {
+      const userData = userDocSnap.data();
+      const role = userData?.role;
+
+      console.log("Role from Firestore:", role);
+
+      if (role === "admin") {
+        console.log("Redirecting ADMIN");
+        router.replace("/(adminDashboard)/adminHome");
       } else {
-        Alert.alert("Login failed. Please try again.")
+        console.log("Redirecting USER");
+        router.replace("/(dashboard)/userHome");
       }
-      console.error('Login error:', err)
-    } finally {
-      hideLoader()
+    } else {
+      console.log("No user document found → fallback to user home");
+      router.replace("/(dashboard)/userHome");
     }
-}
+  } catch (error) {
+    let message = "Login failed. Please try again.";
+    if (error instanceof Error) {
+      message = error.message;
+    }
+    console.error("Login error:", error);
+    Alert.alert("Login failed", message);
+  } finally {
+    hideLoader();
+  }
+};
 
   return (
     <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>

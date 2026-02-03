@@ -42,5 +42,4 @@ app-example
 /ios
 /android
 
-# Firebase files
-services/firebase.ts
+.env

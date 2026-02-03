@@ -10,11 +10,10 @@ export default function Index() {
   const router = useRouter();
   const { user, loading } = useAuth();
 
-  // Splash screen එක පෙන්වන්න කී කාලයක්ද කියලා control කරන්න
   const [showSplash, setShowSplash] = useState(true);
 
+  // Splash screen timer
   useEffect(() => {
-    // Splash screen එක අවම වශයෙන් 2-3 තත්පරයක් පෙන්වන්න
     const splashTimer = setTimeout(() => {
       setShowSplash(false);
     }, 2500); // 2.5 seconds
@@ -23,7 +22,7 @@ export default function Index() {
   }, []);
 
   useEffect(() => {
-    // Splash screen එක ඉවර වෙනකම් redirect කරන්න එපා
+    // Until the splash screen is shown or auth state is loading, don't redirect
     if (showSplash || loading) return;
 
     const redirectUser = async () => {
@@ -37,7 +36,7 @@ export default function Index() {
           if (userData?.role === "admin") {
             router.replace("/(admin)/adminHome");
           } else {
-            router.replace("/(dashboard)/userHome"); // user dashboard එකට
+            router.replace("/(dashboard)/userHome"); 
           }
         } catch (err) {
           console.error("Error fetching user role:", err);
@@ -51,7 +50,7 @@ export default function Index() {
     redirectUser();
   }, [user, loading, showSplash, router]);
 
-  // Splash screen එක පෙන්වන වෙලාව
+  // Splash screen and loading state
   if (showSplash || loading) {
     return (
       <View className="flex-1 justify-center items-center bg-black">
@@ -74,7 +73,7 @@ export default function Index() {
     );
   }
 
-  // Loading state එක (redirect වෙනකන් පෙන්නන්න)
+  // user is authenticated and splash screen is done, but role is still being determined
   return (
     <View className="flex-1 justify-center items-center">
       <ActivityIndicator size="large" color="#0356fc" />

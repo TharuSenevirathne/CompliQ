@@ -4,11 +4,11 @@ import { MaterialIcons, Ionicons } from "@expo/vector-icons"
 
 // Define the tabs with their respective names, icons, and titles
 const tabs = [
-  { name: "home", icon: "home", title: "Home" },
-  { name: "complaintBox", icon: "inbox", title: "Complaint Boxes" },
-  { name: "addComplaint", icon: "add-circle", title: "Add Complaint" },
-  { name: "ai", icon: "psychology", title: "AI Assistant" },
-  { name: "profile", icon: "person", title: "Profile" }
+  { name: "Home", icon: "inbox", title: "Home" },
+  { name: "Complaint Boxes", icon: "inbox", title: "Complaint Boxes" },
+  { name: "Add Complaint", icon: "add-circle", title: "Add Complaint" },
+  { name: "AI Assistant", icon: "psychology", title: "AI Assistant" },
+  { name: "Profile", icon: "person", title: "Profile" }
 ] as const
 
 // DashboardLayout component that sets up the tab navigation

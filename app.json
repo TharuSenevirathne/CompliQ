@@ -26,6 +26,20 @@
       "favicon": "./assets/images/favicon.png"
     },
     "plugins": [
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Allow app to access your photos",
+          "cameraPermission": "Allow app to access your camera"
+        }
+      ],
+      [
+        "expo-media-library",
+        {
+          "photosPermission": "Allow app to save photos to your gallery",
+          "savePhotosPermission": "Allow app to save photos to your gallery"
+        }
+      ],
       "expo-router",
       [
         "expo-splash-screen",

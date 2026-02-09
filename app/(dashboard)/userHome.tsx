@@ -1,8 +1,11 @@
 import { View, Text, ScrollView, TouchableOpacity, StatusBar } from "react-native"
 import React from "react"
 import { MaterialIcons } from "@expo/vector-icons"
+import { useRouter } from "expo-router"
 
 const UserHome = () => {
+
+  const router = useRouter()
   
   const stats = {
     totalComplaints: 12,
@@ -69,21 +72,30 @@ const UserHome = () => {
         <View className="bg-white rounded-2xl p-4 shadow-sm mb-6">
           <Text className="text-black text-lg font-semibold mb-4">Quick Actions</Text>
           <View className="flex-row justify-between">
-            <TouchableOpacity className="items-center flex-1">
+            <TouchableOpacity className="items-center flex-1"
+            onPress={() => {
+                router.push("/addComplaint")
+              }} >
               <View className="bg-black p-4 rounded-2xl mb-2">
                 <MaterialIcons name="add-circle" size={32} color="white" />
               </View>
               <Text className="text-gray-700 text-xs text-center">New Complaint</Text>
             </TouchableOpacity>
             
-            <TouchableOpacity className="items-center flex-1">
+            <TouchableOpacity className="items-center flex-1"
+            onPress={() => {
+                router.push("/ai")
+              }} >
               <View className="bg-blue-600 p-4 rounded-2xl mb-2">
                 <MaterialIcons name="psychology" size={32} color="white" />
               </View>
               <Text className="text-gray-700 text-xs text-center">AI Assistant</Text>
             </TouchableOpacity>
             
-            <TouchableOpacity className="items-center flex-1">
+            <TouchableOpacity className="items-center flex-1"
+            onPress={() => {
+                router.push("/complaintBox")
+              }} >
               <View className="bg-gray-800 p-4 rounded-2xl mb-2">
                 <MaterialIcons name="inbox" size={32} color="white" />
               </View>
@@ -124,7 +136,10 @@ const UserHome = () => {
         <View className="bg-white rounded-2xl p-4 shadow-sm mb-6">
           <View className="flex-row justify-between items-center mb-4">
             <Text className="text-black text-lg font-semibold">Recent Complaints</Text>
-            <TouchableOpacity>
+            <TouchableOpacity
+            onPress={() => {
+                router.push("/complaintBox")
+              }} >
               <Text className="text-blue-600 text-sm font-medium">View All</Text>
             </TouchableOpacity>
           </View>

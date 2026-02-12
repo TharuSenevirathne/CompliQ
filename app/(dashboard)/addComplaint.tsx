@@ -1,11 +1,16 @@
-import { View, Text, ScrollView, TouchableOpacity, TextInput, Image, Alert, Platform } from "react-native"
+import { View, Text, ScrollView, TouchableOpacity, TextInput, Image, Alert, Platform, ActivityIndicator } from "react-native"
 import React, { useState } from "react"
 import { MaterialIcons } from "@expo/vector-icons"
 import * as ImagePicker from "expo-image-picker"
 import * as MediaLibrary from "expo-media-library"
 import DateTimePicker from '@react-native-community/datetimepicker'
+import { submitComplaint } from "@/services/complaintService"
+import { useAuth } from "@/hooks/useAuth"
 
 const AddComplaint = () => {
+
+  const { user } = useAuth() // Get current user
+  
   const [title, setTitle] = useState("")
   const [description, setDescription] = useState("")
   const [selectedType, setSelectedType] = useState("")
@@ -15,6 +20,7 @@ const AddComplaint = () => {
   const [priority, setPriority] = useState("medium")
   const [date, setDate] = useState(new Date())
   const [showDatePicker, setShowDatePicker] = useState(false)
+  const [isSubmitting, setIsSubmitting] = useState(false)
 
   const complaintTypes = [
     { id: "road", label: "Road Issues", icon: "road" },
@@ -115,6 +121,7 @@ const AddComplaint = () => {
   }
 
   const handleSubmit = async () => {
+    // Validation
     if (!title.trim()) {
       Alert.alert("Error", "Please enter a title")
       return
@@ -127,29 +134,53 @@ const AddComplaint = () => {
       Alert.alert("Error", "Please select a complaint type")
       return
     }
-
-    // Save all images to gallery before submitting
-    if (images.length > 0) {
-      const { status } = await MediaLibrary.requestPermissionsAsync()
-      
-      if (status === 'granted') {
-        for (const imageUri of images) {
-          await MediaLibrary.createAssetAsync(imageUri)
-        }
-      }
+    if (!user) {
+      Alert.alert("Error", "You must be logged in to submit a complaint")
+      return
     }
 
-    Alert.alert("Success", "Complaint submitted successfully!")
-    
-    // Reset form
-    setTitle("")
-    setDescription("")
-    setSelectedType("")
-    setImages([])
-    setVideo(null)
-    setLocation("")
-    setPriority("medium")
-    setDate(new Date())
+    setIsSubmitting(true)
+
+    try {
+      const complaintData = {
+        title,
+        description,
+        type: selectedType,
+        location,
+        priority,
+        date,
+        images,
+        video
+      }
+
+      const result = await submitComplaint(user.uid, complaintData)
+
+      if (result.success) {
+        Alert.alert("Success", "Complaint submitted successfully!", [
+          {
+            text: "OK",
+            onPress: () => {
+              // Reset form
+              setTitle("")
+              setDescription("")
+              setSelectedType("")
+              setImages([])
+              setVideo(null)
+              setLocation("")
+              setPriority("medium")
+              setDate(new Date())
+            }
+          }
+        ])
+      } else {
+        Alert.alert("Error", "Failed to submit complaint. Please try again.")
+      }
+    } catch (error) {
+      console.error("Submit error:", error)
+      Alert.alert("Error", "An unexpected error occurred")
+    } finally {
+      setIsSubmitting(false)
+    }
   }
 
   return (
@@ -362,9 +393,23 @@ const AddComplaint = () => {
         {/* Submit Button */}
         <TouchableOpacity
           onPress={handleSubmit}
-          className="bg-blue-600 rounded-2xl py-4 mb-6 shadow-lg active:bg-blue-700"
+          disabled={isSubmitting}
+          className={`rounded-2xl py-4 mb-6 shadow-lg ${
+            isSubmitting ? 'bg-blue-400' : 'bg-blue-600 active:bg-blue-700'
+          }`}
         >
-          <Text className="text-white text-center font-bold text-lg">Submit Complaint</Text>
+          {isSubmitting ? (
+            <View className="flex-row items-center justify-center">
+              <ActivityIndicator color="white" />
+              <Text className="text-white text-center font-bold text-lg ml-2">
+                Submitting...
+              </Text>
+            </View>
+          ) : (
+            <Text className="text-white text-center font-bold text-lg">
+              Submit Complaint
+            </Text>
+          )}
         </TouchableOpacity>
       </ScrollView>
     </View>

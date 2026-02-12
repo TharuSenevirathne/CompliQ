@@ -1,46 +1,27 @@
-// services/complaintService.ts
 import { collection, addDoc, serverTimestamp } from "firebase/firestore"
-import { ref, uploadBytes, getDownloadURL } from "firebase/storage"
-import { db, storage } from "@/services/firebase"
-import { updateDoc } from "firebase/firestore";
-import { doc } from "firebase/firestore";
+import { db } from "@/services/firebase"
 
-
-// Upload single image to Firebase Storage
-const uploadImage = async (uri: string, complaintId: string, index: number) => {
+// Convert image to base64
+const convertToBase64 = async (uri: string): Promise<string | null> => {
   try {
     const response = await fetch(uri)
     const blob = await response.blob()
     
-    const storageRef = ref(storage, `complaints/${complaintId}/image_${index}.jpg`)
-    await uploadBytes(storageRef, blob)
-    
-    const downloadURL = await getDownloadURL(storageRef)
-    return downloadURL
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader()
+      reader.onloadend = () => {
+        resolve(reader.result as string)
+      }
+      reader.onerror = reject
+      reader.readAsDataURL(blob)
+    })
   } catch (error) {
-    console.error("Error uploading image:", error)
+    console.error("Error converting to base64:", error)
     return null
   }
 }
 
-// Upload video to Firebase Storage
-const uploadVideo = async (uri: string, complaintId: string) => {
-  try {
-    const response = await fetch(uri)
-    const blob = await response.blob()
-    
-    const storageRef = ref(storage, `complaints/${complaintId}/video.mp4`)
-    await uploadBytes(storageRef, blob)
-    
-    const downloadURL = await getDownloadURL(storageRef)
-    return downloadURL
-  } catch (error) {
-    console.error("Error uploading video:", error)
-    return null
-  }
-}
-
-// Submit complaint to Firestore
+// Submit complaint to Firestore 
 export const submitComplaint = async (
   userId: string,
   complaintData: {
@@ -55,7 +36,22 @@ export const submitComplaint = async (
   }
 ) => {
   try {
-    // First create the document to get an ID
+    // Convert images to base64
+    const imageBase64Array: string[] = []
+    for (const imageUri of complaintData.images) {
+      const base64 = await convertToBase64(imageUri)
+      if (base64) {
+        imageBase64Array.push(base64)
+      }
+    }
+
+    // Convert video to base64 if exists
+    let videoBase64 = null
+    if (complaintData.video) {
+      videoBase64 = await convertToBase64(complaintData.video)
+    }
+
+    // Create document in Firestore
     const docRef = await addDoc(collection(db, "complaints"), {
       userId,
       title: complaintData.title,
@@ -66,34 +62,11 @@ export const submitComplaint = async (
       incidentDate: complaintData.date.toISOString(),
       status: "pending",
       createdAt: serverTimestamp(),
-      imageUrls: [],
-      videoUrl: null
+      images: imageBase64Array,
+      video: videoBase64
     })
 
-    const complaintId = docRef.id
-
-    // Upload images if any
-    const imageUrls: string[] = []
-    if (complaintData.images.length > 0) {
-      for (let i = 0; i < complaintData.images.length; i++) {
-        const url = await uploadImage(complaintData.images[i], complaintId, i)
-        if (url) imageUrls.push(url)
-      }
-    }
-
-    // Upload video if any
-    let videoUrl = null
-    if (complaintData.video) {
-      videoUrl = await uploadVideo(complaintData.video, complaintId)
-    }
-
-    // Update document with media URLs
-    await updateDoc(doc(db, "complaints", complaintId), {
-      imageUrls,
-      videoUrl
-    })
-
-    return { success: true, id: complaintId }
+    return { success: true, id: docRef.id }
   } catch (error) {
     console.error("Error submitting complaint:", error)
     return { success: false, error }

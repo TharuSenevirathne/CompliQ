@@ -1,5 +1,21 @@
 import { collection, addDoc, serverTimestamp } from "firebase/firestore"
 import { db } from "@/services/firebase"
+import * as ImageManipulator from 'expo-image-manipulator'
+
+// Compress image before saving
+const compressImage = async (uri: string): Promise<string> => {
+  try {
+    const manipResult = await ImageManipulator.manipulateAsync(
+      uri,
+      [{ resize: { width: 800 } }], // Resize to max 800px width
+      { compress: 0.7, format: ImageManipulator.SaveFormat.JPEG }
+    )
+    return manipResult.uri
+  } catch (error) {
+    console.error("Error compressing image:", error)
+    return uri // Return original if compression fails
+  }
+}
 
 // Convert image to base64
 const convertToBase64 = async (uri: string): Promise<string | null> => {
@@ -21,7 +37,7 @@ const convertToBase64 = async (uri: string): Promise<string | null> => {
   }
 }
 
-// Submit complaint to Firestore 
+// Submit complaint to Firestore
 export const submitComplaint = async (
   userId: string,
   complaintData: {
@@ -36,19 +52,19 @@ export const submitComplaint = async (
   }
 ) => {
   try {
-    // Convert images to base64
+    // Limit to maximum 3 images to avoid Firestore size limit
+    const imagesToProcess = complaintData.images.slice(0, 3)
+    
+    // Compress and convert images to base64
     const imageBase64Array: string[] = []
-    for (const imageUri of complaintData.images) {
-      const base64 = await convertToBase64(imageUri)
+    for (const imageUri of imagesToProcess) {
+      // First compress the image
+      const compressedUri = await compressImage(imageUri)
+      // Then convert to base64
+      const base64 = await convertToBase64(compressedUri)
       if (base64) {
         imageBase64Array.push(base64)
       }
-    }
-
-    // Convert video to base64 if exists
-    let videoBase64 = null
-    if (complaintData.video) {
-      videoBase64 = await convertToBase64(complaintData.video)
     }
 
     // Create document in Firestore
@@ -63,7 +79,7 @@ export const submitComplaint = async (
       status: "pending",
       createdAt: serverTimestamp(),
       images: imageBase64Array,
-      video: videoBase64
+      imageCount: imageBase64Array.length
     })
 
     return { success: true, id: docRef.id }

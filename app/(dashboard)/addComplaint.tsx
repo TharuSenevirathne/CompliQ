@@ -79,7 +79,18 @@ const AddComplaint = () => {
 
     if (!result.canceled && result.assets) {
       const newImages = result.assets.map(asset => asset.uri)
-      setImages([...images, ...newImages])
+      const totalImages = [...images, ...newImages]
+      
+      // Limit to 3 images
+      if (totalImages.length > 3) {
+        Alert.alert(
+          "Image Limit", 
+          "You can only upload maximum 3 images. First 3 images will be selected."
+        )
+        setImages(totalImages.slice(0, 3))
+      } else {
+        setImages(totalImages)
+      }
     }
   }
 

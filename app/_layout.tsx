@@ -1,61 +1,60 @@
-// import React from "react";
-// import { Slot } from "expo-router";
-// import { SafeAreaView } from "react-native-safe-area-context";
-// import { useFonts } from 'expo-font';
-// import * as SplashScreen from 'expo-splash-screen';
-// import { MaterialIcons } from '@expo/vector-icons';
-// import { useEffect } from 'react';
-
-// // RootLayout component that wraps the app content in a SafeAreaView
-// const RootLayout = () => {
-//     return (
-//         <SafeAreaView style={{ flex: 1 }}>
-//             <Slot />
-//         </SafeAreaView>
-//     )
-// }
-
-// export default RootLayout
-
-
-
 import React from "react";
-import { Slot } from "expo-router";
+import { Slot, Redirect } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useFonts } from "expo-font";
 import * as SplashScreen from "expo-splash-screen";
 import { MaterialIcons } from "@expo/vector-icons";
 import { useEffect } from "react";
+import { AuthProvider } from "@/contexts/AuthContext";
+import { useAuth } from "@/hooks/useAuth";
 
-// Splash screen එක auto hide වෙන එක prevent කරන්න
+// Prevent the splash screen from auto-hiding while we check auth state and load fonts
 SplashScreen.preventAutoHideAsync();
 
-// RootLayout component ඇතුළේ hooks භාවිතා කරන්න ඕන
+// Root layout that wraps the entire app with AuthProvider and manages auth flow
 const RootLayout = () => {
-  // Fonts load කරන්න
   const [fontsLoaded, fontError] = useFonts({
-    // MaterialIcons font එක preload කරනවා
     ...MaterialIcons.font,
   });
 
+  // Hide splash screen once fonts are loaded or if there's an error (to avoid infinite splash)
   useEffect(() => {
     if (fontsLoaded || fontError) {
-      // Fonts load වුණාට පස්සේ splash screen hide කරන්න
       SplashScreen.hideAsync();
     }
   }, [fontsLoaded, fontError]);
 
-  // Fonts තාම load වෙලා නැත්නම් splash screen එක පෙන්වන්න (null හෝ custom loader)
   if (!fontsLoaded && !fontError) {
-    return null; // හෝ <View><Text>Loading fonts...</Text></View>
+    return null;
   }
 
-  // Fonts load උනාට පස්සේ normal content පෙන්වන්න
+  // Main layout with auth context and flow manager
   return (
-    <SafeAreaView style={{ flex: 1 }}>
-      <Slot />
-    </SafeAreaView>
+    <AuthProvider>
+      <SafeAreaView style={{ flex: 1 }}>
+        <AuthFlowManager />
+        <Slot />
+      </SafeAreaView>
+    </AuthProvider>
   );
 };
+
+// Component to manage authentication flow and redirects
+function AuthFlowManager() {
+  const { user, initializing } = useAuth();
+
+  // Auth state is still initializing → show nothing (splash is still visible)
+  if (initializing) {
+    return null; 
+  }
+
+  // No user → redirect to login page (replace to prevent back navigation)
+  if (!user) {
+    return <Redirect href="/(auth)/login" />; 
+  }
+
+  // User is authenticated → render the app (Slot will render the current route)
+  return null;
+}
 
 export default RootLayout;

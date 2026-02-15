@@ -3,7 +3,6 @@ import { auth, db } from "./firebase"
 import { doc, setDoc } from "firebase/firestore"
 import AsyncStorage from "@react-native-async-storage/async-storage"
 
-
 // Login user
 export const login = async (email: string, password: string) => {
   return await signInWithEmailAndPassword(auth, email, password)

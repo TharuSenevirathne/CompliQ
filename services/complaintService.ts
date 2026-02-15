@@ -1,6 +1,7 @@
 import { collection, addDoc, serverTimestamp } from "firebase/firestore"
 import { db } from "@/services/firebase"
 import * as ImageManipulator from 'expo-image-manipulator'
+import { FirebaseError } from 'firebase/app';
 
 // Compress image before saving
 const compressImage = async (uri: string): Promise<string> => {
@@ -38,53 +39,28 @@ const convertToBase64 = async (uri: string): Promise<string | null> => {
 }
 
 // Submit complaint to Firestore
-export const submitComplaint = async (
-  userId: string,
-  complaintData: {
-    title: string
-    description: string
-    type: string
-    location: string
-    priority: string
-    date: Date
-    images: string[]
-    video: string | null
-  }
-) => {
+export const submitComplaint = async (uid: string, data: any) => {
   try {
-    // Limit to maximum 3 images to avoid Firestore size limit
-    const imagesToProcess = complaintData.images.slice(0, 3)
-    
-    // Compress and convert images to base64
-    const imageBase64Array: string[] = []
-    for (const imageUri of imagesToProcess) {
-      // First compress the image
-      const compressedUri = await compressImage(imageUri)
-      // Then convert to base64
-      const base64 = await convertToBase64(compressedUri)
-      if (base64) {
-        imageBase64Array.push(base64)
-      }
-    }
+    console.log("submitComplaint → UID:", uid);
+    console.log("Data:", JSON.stringify(data, null, 2));
 
-    // Create document in Firestore
     const docRef = await addDoc(collection(db, "complaints"), {
-      userId,
-      title: complaintData.title,
-      description: complaintData.description,
-      type: complaintData.type,
-      location: complaintData.location,
-      priority: complaintData.priority,
-      incidentDate: complaintData.date.toISOString(),
-      status: "pending",
+      ...data,
+      userId: uid,
+      status: data.status || "pending",
       createdAt: serverTimestamp(),
-      images: imageBase64Array,
-      imageCount: imageBase64Array.length
-    })
+      updatedAt: serverTimestamp(),
+    });
 
-    return { success: true, id: docRef.id }
-  } catch (error) {
-    console.error("Error submitting complaint:", error)
-    return { success: false, error }
+    console.log("Success → Doc ID:", docRef.id);
+    return { success: true, id: docRef.id };
+  } catch (error: any) {
+    console.error("submitComplaint ERROR:", {
+      code: error.code,
+      message: error.message,
+      details: error.details || "No details",
+    });
+
+    return { success: false, error: error.message || "Unknown Firestore error" };
   }
-}
+};

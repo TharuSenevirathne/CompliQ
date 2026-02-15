@@ -9,7 +9,7 @@ import { useAuth } from "@/hooks/useAuth"
 
 const AddComplaint = () => {
 
-  const { user } = useAuth() // Get current user
+  const { user} = useAuth() // Get current user
   
   const [title, setTitle] = useState("")
   const [description, setDescription] = useState("")
@@ -23,7 +23,7 @@ const AddComplaint = () => {
   const [isSubmitting, setIsSubmitting] = useState(false)
 
   const complaintTypes = [
-    { id: "road", label: "Road Issues", icon: "road" },
+    { id: "road", label: "Road Issues", icon: "directions" },
     { id: "waste", label: "Waste Management", icon: "delete" },
     { id: "water", label: "Water Supply", icon: "water-drop" },
     { id: "electricity", label: "Electricity", icon: "electrical-services" },
@@ -69,42 +69,41 @@ const AddComplaint = () => {
     }
   }
 
-  //  PICK IMAGE FROM GALLERY ---
+  // PICK IMAGE FROM GALLERY ---
   const pickImage = async () => {
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
-      allowsMultipleSelection: true,
-      quality: 1,
-    })
+   const result = await ImagePicker.launchImageLibraryAsync({
+    mediaTypes: ImagePicker.MediaTypeOptions.Images,
+    allowsMultipleSelection: true,
+    quality: 1,
+  });
 
     if (!result.canceled && result.assets) {
-      const newImages = result.assets.map(asset => asset.uri)
-      const totalImages = [...images, ...newImages]
+      const newImages = result.assets.map(asset => asset.uri);
+      const totalImages = [...images, ...newImages];
       
-      // Limit to 3 images
       if (totalImages.length > 3) {
         Alert.alert(
           "Image Limit", 
           "You can only upload maximum 3 images. First 3 images will be selected."
-        )
-        setImages(totalImages.slice(0, 3))
+        );
+        setImages(totalImages.slice(0, 3));
       } else {
-        setImages(totalImages)
+        setImages(totalImages);
       }
     }
-  }
+  };
 
   // PICK VIDEO FROM GALLERY ---
   const pickVideo = async () => {
     const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Videos,
-      quality: 1,
-    })
+    mediaTypes: ImagePicker.MediaTypeOptions.Videos,
+    quality: 1,
+  });
 
     if (!result.canceled && result.assets) {
-      setVideo(result.assets[0].uri)
+      setVideo(result.assets[0].uri);
     }
-  }
+  };
 
   // SAVE IMAGE TO DEVICE GALLERY ---
   const saveImageToGallery = async (imageUri: string) => {
@@ -132,67 +131,52 @@ const AddComplaint = () => {
   }
 
   const handleSubmit = async () => {
-    // Validation
-    if (!title.trim()) {
-      Alert.alert("Error", "Please enter a title")
-      return
-    }
-    if (!description.trim()) {
-      Alert.alert("Error", "Please enter a description")
-      return
-    }
-    if (!selectedType) {
-      Alert.alert("Error", "Please select a complaint type")
-      return
-    }
-    if (!user) {
-      Alert.alert("Error", "You must be logged in to submit a complaint")
-      return
+    console.log("handleSubmit called! Current user:", user?.uid);
+
+    if (!user?.uid) {
+      Alert.alert("Not logged in", "Please login again — user session not active");
+      // Optional: router.replace('/login') or whatever your login route is
+      return;
     }
 
-    setIsSubmitting(true)
+    if (!title.trim() || !description.trim() || !selectedType) {
+      Alert.alert("Error", "Title, description and type are required");
+      return;
+    }
+
+    setIsSubmitting(true);
 
     try {
       const complaintData = {
-        title,
-        description,
+        title: title.trim(),
+        description: description.trim(),
         type: selectedType,
-        location,
+        location: location.trim() || null,
         priority,
-        date,
-        images,
-        video
-      }
+        date: date.toISOString(),
+        images,     // we'll fix this later – local URIs won't work
+        video,
+        status: "pending",
+      };
 
-      const result = await submitComplaint(user.uid, complaintData)
+      console.log("Submitting data:", complaintData);
+
+      const result = await submitComplaint(user.uid, complaintData);
 
       if (result.success) {
-        Alert.alert("Success", "Complaint submitted successfully!", [
-          {
-            text: "OK",
-            onPress: () => {
-              // Reset form
-              setTitle("")
-              setDescription("")
-              setSelectedType("")
-              setImages([])
-              setVideo(null)
-              setLocation("")
-              setPriority("medium")
-              setDate(new Date())
-            }
-          }
-        ])
+        Alert.alert("Success", "Complaint submitted! ID: " + result.id);
+        // Optional: reset form or navigate away
       } else {
-        Alert.alert("Error", "Failed to submit complaint. Please try again.")
+        Alert.alert("Error", result.error || "Failed to submit");
       }
-    } catch (error) {
-      console.error("Submit error:", error)
-      Alert.alert("Error", "An unexpected error occurred")
+    } catch (err: any) {
+      console.error("Submit error:", err);
+      Alert.alert("Error", "Unexpected issue: " + err.message);
     } finally {
-      setIsSubmitting(false)
+      setIsSubmitting(false);
     }
-  }
+  };
+  
 
   return (
     <View className="flex-1 bg-gray-50">
@@ -403,8 +387,11 @@ const AddComplaint = () => {
 
         {/* Submit Button */}
         <TouchableOpacity
-          onPress={handleSubmit}
-          disabled={isSubmitting}
+          onPress={() => {
+    console.log("Submit button pressed!");
+    handleSubmit();
+  }}
+  disabled={isSubmitting}
           className={`rounded-2xl py-4 mb-6 shadow-lg ${
             isSubmitting ? 'bg-blue-400' : 'bg-blue-600 active:bg-blue-700'
           }`}

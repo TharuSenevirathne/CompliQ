@@ -3,46 +3,74 @@ import { auth } from "@/services/firebase"
 import { onAuthStateChanged, User } from "firebase/auth"
 import { createContext, ReactNode, useContext, useEffect, useState } from "react"
 
-// Define the shape of the AuthContext
+// Define the shape of our AuthContext
 interface AuthContextType {
   user: User | null
-  loading: boolean
+  loading: boolean          
+  initializing: boolean     
 }
 
-// Create the AuthContext with default values
+// Default context value (good practice)
 export const AuthContext = createContext<AuthContextType>({
   user: null,
-  loading: false
+  loading: false,
+  initializing: true,
 })
 
-// AuthProvider component to wrap the app and provide auth state
+
+// AuthProvider component that wraps the app and provides auth state
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const { showLoader, hideLoader, isLoading } = useLoader()
   const [user, setUser] = useState<User | null>(null)
+  const [initializing, setInitializing] = useState(true)
 
   useEffect(() => {
-    console.log("AuthProvider: Starting onAuthStateChanged listener");
+    console.log("AuthProvider → Starting auth setup")
 
-    showLoader();
+    showLoader()
 
+    // Immediately check current user (critical for web/redirect/refresh)
+    const currentUser = auth.currentUser
+    if (currentUser) {
+      console.log("Immediate currentUser found →", currentUser.email, currentUser.uid)
+      setUser(currentUser)
+      setInitializing(false)
+      hideLoader()
+    }
+
+    // Set up listener for future changes
     const unsubscribe = onAuthStateChanged(auth, (usr) => {
-      console.log("onAuthStateChanged FIRED → user:", usr ? usr.email : "null");
-      console.log("onAuthStateChanged FIRED → UID:", usr ? usr.uid : "null");
+      console.log(
+        "onAuthStateChanged FIRED →",
+        usr ? `${usr.email} (${usr.uid})` : "null"
+      )
 
-      setUser(usr);
-      hideLoader();
-    });
+      setUser(usr)
 
+      // Only set false + hide loader once (first real response)
+      if (initializing) {
+        setInitializing(false)
+        hideLoader()
+      }
+    })
+
+    // Clean up subscription on unmount
     return () => {
-      console.log("AuthProvider: Cleaning up onAuthStateChanged");
-      unsubscribe();
-    };
-  }, []);
+      console.log("AuthProvider → Cleaning up")
+      unsubscribe()
+    }
+  }, [])
+
+  // Memoize context value to prevent unnecessary re-renders
+  const value: AuthContextType = {
+    user,
+    loading: isLoading,
+    initializing,
+  }
 
   return (
-    <AuthContext.Provider value={{ user, loading: isLoading }}>
+    <AuthContext.Provider value={value}>
       {children}
     </AuthContext.Provider>
   )
-
 }

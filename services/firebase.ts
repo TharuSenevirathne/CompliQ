@@ -2,6 +2,7 @@ import { initializeApp } from "firebase/app";
 import { getAuth } from "firebase/auth";
 import { getFirestore } from "firebase/firestore";
 
+// Firebase configuration (use environment variables for security)
 const firebaseConfig = {
   apiKey: process.env.EXPO_PUBLIC_FIREBASE_API_KEY,
   authDomain: process.env.EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN,
@@ -11,8 +12,10 @@ const firebaseConfig = {
   appId: process.env.EXPO_PUBLIC_FIREBASE_APP_ID,
 }
 
+// Initialize Firebase
 const app = initializeApp(firebaseConfig)
 
+// Export auth and firestore instances for use in the app
 export const auth = getAuth(app);
 export const db = getFirestore(app)
 

@@ -58,34 +58,39 @@ const ComplaintBox = () => {
       q,
       (snapshot) => {
         const loaded: Complaint[] = snapshot.docs.map((doc) => {
-          const data = doc.data();
-          let createdAtDate: Date | undefined;
+        const data = doc.data();
+        let createdAtDate: Date | undefined;
 
-          // Handle different createdAt formats (Timestamp, Date, string)
-          if (data.createdAt instanceof Timestamp) {
-            createdAtDate = data.createdAt.toDate();
-          } else if (data.createdAt instanceof Date) {
-            createdAtDate = data.createdAt;
-          } else if (typeof data.createdAt === "string") {
-            const parsed = new Date(data.createdAt);
-            createdAtDate = isNaN(parsed.getTime()) ? undefined : parsed;
-          }
+        if (data.createdAt instanceof Timestamp) {
+          createdAtDate = data.createdAt.toDate();
+        } else if (data.createdAt instanceof Date) {
+          createdAtDate = data.createdAt;
+        } else if (typeof data.createdAt === "string") {
+          const parsed = new Date(data.createdAt);
+          createdAtDate = isNaN(parsed.getTime()) ? undefined : parsed;
+        }
 
-          // Map the data to the Complaint type, ensuring defaults and type safety
-          return {
-            id: doc.id,
-            title: (data.title as string) || "",
-            description: (data.description as string) || "",
-            type: (data.type as string) || "other",
-            status: (data.status as "pending" | "in-progress" | "resolved") || "pending",
-            priority: (data.priority as "low" | "medium" | "high") || "medium",
-            location: (data.location as string) || "",
-            createdAt: createdAtDate,
-            images: (data.images as string[]) || [],
-            video: (data.video as string | null) || null,
-            userId: data.userId as string | undefined,
-            ...data,
-          };
+        if (!createdAtDate && typeof data.date === "string") {
+          const parsed = new Date(data.date);
+          createdAtDate = isNaN(parsed.getTime()) ? undefined : parsed;
+        }
+
+        // Ensure we only load complaints that belong to the current user
+        return {
+          id: doc.id,
+          title: (data.title as string) || "",
+          description: (data.description as string) || "",
+          type: (data.type as string) || "other",
+          status: (data.status as "pending" | "in-progress" | "resolved") || "pending",
+          priority: (data.priority as "low" | "medium" | "high") || "medium",
+          location: (data.location as string) || "",
+          createdAt: createdAtDate,
+          images: (data.images as string[]) || [],
+          video: (data.video as string | null) || null,
+          userId: data.userId as string | undefined,
+          ...data,
+        };
+
         });
 
         setComplaints(loaded);
@@ -323,7 +328,7 @@ const ComplaintBox = () => {
             <TouchableOpacity
               onPress={() => setFilterStatus("pending")}
               className={`flex-1 py-3 rounded-xl mx-1 ${
-                filterStatus === "pending" ? "bg-yellow-500" : "bg-white border-2 border-gray-200"
+                filterStatus === "pending" ? "bg-yellow-400" : "bg-white border-2 border-gray-200"
               }`}
             >
               <Text
@@ -339,28 +344,6 @@ const ComplaintBox = () => {
                 }`}
               >
                 {complaints.filter((c) => c.status === "pending").length}
-              </Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              onPress={() => setFilterStatus("in-progress")}
-              className={`flex-1 py-3 rounded-xl mx-1 ${
-                filterStatus === "in-progress" ? "bg-blue-500" : "bg-white border-2 border-gray-200"
-              }`}
-            >
-              <Text
-                className={`text-center font-bold text-xs ${
-                  filterStatus === "in-progress" ? "text-white" : "text-gray-600"
-                }`}
-              >
-                Active
-              </Text>
-              <Text
-                className={`text-center text-xs mt-1 ${
-                  filterStatus === "in-progress" ? "text-blue-100" : "text-gray-400"
-                }`}
-              >
-                {complaints.filter((c) => c.status === "in-progress").length}
               </Text>
             </TouchableOpacity>
 
@@ -426,11 +409,6 @@ const ComplaintBox = () => {
                         {complaint.title}
                       </Text>
                     </View>
-                    <Text className="text-gray-400 text-xs ml-10">
-                      {complaint.createdAt instanceof Date
-                        ? complaint.createdAt.toLocaleDateString()
-                        : "No date"}
-                    </Text>
                   </View>
                   <View
                     className={`px-3 py-1.5 rounded-full ${getStatusColor(complaint.status)}`}
@@ -502,7 +480,7 @@ const ComplaintBox = () => {
                 <View className="flex-row justify-between">
                   <TouchableOpacity
                     onPress={() => handleViewDetails(complaint)}
-                    className="flex-1 bg-blue-600 rounded-xl py-2.5 mr-1.5 flex-row items-center justify-center"
+                    className="flex-1 bg-gray-600 rounded-xl py-2.5 mr-1.5 flex-row items-center justify-center"
                   >
                     <MaterialIcons name="visibility" size={16} color="white" />
                     <Text className="text-white font-semibold ml-1.5 text-sm">
@@ -512,7 +490,7 @@ const ComplaintBox = () => {
 
                   <TouchableOpacity
                     onPress={() => handleOpenEdit(complaint)}
-                    className="flex-1 bg-blue-500 rounded-xl py-2.5 mx-1.5 flex-row items-center justify-center"
+                    className="flex-1 bg-green-500 rounded-xl py-2.5 mx-1.5 flex-row items-center justify-center"
                   >
                     <MaterialIcons name="edit" size={16} color="white" />
                     <Text className="text-white font-semibold ml-1.5 text-sm">

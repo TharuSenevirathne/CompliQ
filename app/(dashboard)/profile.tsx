@@ -1,18 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { 
-  View, Text, TextInput, TouchableOpacity, Image, 
-  ActivityIndicator, Alert, ScrollView 
-} from 'react-native';
+import {  View, Text, TextInput, TouchableOpacity, Image, ActivityIndicator, Alert, ScrollView } from 'react-native';
 import { auth, db } from '@/services/firebase';
-import { 
-  updateProfile, updateEmail, updatePassword, 
-  signOut, onAuthStateChanged, reauthenticateWithCredential, 
-  EmailAuthProvider 
-} from 'firebase/auth';
+import {  updateProfile, updateEmail, updatePassword, signOut, onAuthStateChanged, reauthenticateWithCredential, EmailAuthProvider } from 'firebase/auth';
 import { doc, getDoc, updateDoc, collection, query, where, getDocs } from 'firebase/firestore';
 import { MaterialIcons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import { useRouter } from 'expo-router';
+import Toast from 'react-native-toast-message';
 
 export default function Profile() {
   const router = useRouter();
@@ -174,27 +168,34 @@ export default function Profile() {
     }
   };
 
-  const handleLogout = async () => {
-    Alert.alert(
-      'Logout',
-      'Are you sure you want to logout?',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Logout',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              await signOut(auth);
-              router.replace('/(auth)/login');
-            } catch (error: any) {
-              Alert.alert('Logout Failed', error.message);
-            }
-          }
-        }
-      ]
-    );
-  };
+  const handleLogout = () => {
+  Toast.show({
+    type: 'info',
+    text1: 'Confirm Logout',
+    text2: 'Tap this message to logout',
+    visibilityTime: 5000, // 5 seconds
+    position: 'top',
+    topOffset: 60,
+    onPress: async () => {
+      try {
+        await signOut(auth);
+        Toast.show({
+          type: 'success',
+          text1: 'Logged Out',
+          text2: 'See you again!',
+          visibilityTime: 3000,
+        });
+        router.replace('/(auth)/login');
+      } catch (error: any) {
+        Toast.show({
+          type: 'error',
+          text1: 'Logout Failed',
+          text2: error.message || 'Something went wrong',
+        });
+      }
+    },
+  });
+};
 
   if (loading) {
     return (

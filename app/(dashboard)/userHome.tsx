@@ -3,7 +3,7 @@ import React, { useState, useEffect } from "react"
 import { MaterialIcons } from "@expo/vector-icons"
 import { useRouter } from "expo-router"
 import { useAuth } from "@/hooks/useAuth"
-import { collection, query, where, getDocs, orderBy, limit } from "firebase/firestore"
+import { collection, query, where, getDocs } from "firebase/firestore"
 import { db } from "@/services/firebase"
 
 const UserHome = () => {

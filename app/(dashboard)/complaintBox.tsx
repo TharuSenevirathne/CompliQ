@@ -646,20 +646,6 @@ const ComplaintBox = () => {
                         {selectedComplaint.priority}
                       </Text>
                     </View>
-
-                    <View>
-                      <Text className="text-gray-500 text-xs font-semibold mb-2 uppercase">
-                        Submitted Date
-                      </Text>
-                      <View className="flex-row items-center">
-                        <MaterialIcons name="calendar-today" size={18} color="#6b7280" />
-                        <Text className="text-gray-800 text-base ml-2">
-                          {selectedComplaint.createdAt instanceof Date
-                            ? selectedComplaint.createdAt.toLocaleDateString()
-                            : "No date"}
-                        </Text>
-                      </View>
-                    </View>
                   </View>
 
                   <View className="flex-row mt-4">

@@ -6,6 +6,7 @@ import * as MediaLibrary from "expo-media-library"
 import DateTimePicker from '@react-native-community/datetimepicker'
 import { submitComplaint } from "@/services/complaintService"
 import { useAuth } from "@/hooks/useAuth"
+import Toast from 'react-native-toast-message';
 
 const AddComplaint = () => {
 
@@ -22,6 +23,7 @@ const AddComplaint = () => {
   const [showDatePicker, setShowDatePicker] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
 
+  // Predefined complaint types and priorities
   const complaintTypes = [
     { id: "road", label: "Road Issues", icon: "directions" },
     { id: "waste", label: "Waste Management", icon: "delete" },
@@ -31,12 +33,14 @@ const AddComplaint = () => {
     { id: "other", label: "Other", icon: "more-horiz" }
   ]
 
+  // Priority levels with colors
   const priorities = [
     { id: "low", label: "Low", color: "bg-green-500" },
     { id: "medium", label: "Medium", color: "bg-yellow-500" },
     { id: "high", label: "High", color: "bg-red-500" }
   ]
 
+  //  Helper to format date for display
   const formatDate = (date: Date) => {
     return date.toLocaleDateString('en-US', { 
       year: 'numeric', 
@@ -45,6 +49,7 @@ const AddComplaint = () => {
     })
   }
 
+  // Handle date change from picker
   const onDateChange = (event: any, selectedDate?: Date) => {
     setShowDatePicker(Platform.OS === 'ios')
     if (selectedDate) {
@@ -130,52 +135,86 @@ const AddComplaint = () => {
     setImages(images.filter((_, i) => i !== index))
   }
 
+  // SUBMIT COMPLAINT ---
   const handleSubmit = async () => {
-    console.log("handleSubmit called! Current user:", user?.uid);
 
-    if (!user?.uid) {
-      Alert.alert("Not logged in", "Please login again — user session not active");
-      // Optional: router.replace('/login') or whatever your login route is
-      return;
+  // Basic validation
+  if (!user?.uid) {
+    Alert.alert("Not logged in", "Please login again");
+    return;
+  }
+
+  // Trim inputs and validate required fields
+  if (!title.trim() || !description.trim() || !selectedType) {
+    Alert.alert("Error", "Title, description and type are required");
+    return;
+  }
+  // Prevent multiple submissions
+  setIsSubmitting(true);
+
+  try {
+    // Prepare complaint data
+    const complaintData = {
+      title: title.trim(),
+      description: description.trim(),
+      type: selectedType,
+      location: location.trim() || null,
+      priority,
+      date: date.toISOString(),
+      images,
+      video,
+      status: "pending",
+    };
+
+    console.log("📤 Submitting complaint with data:", complaintData);
+    const result = await submitComplaint(user.uid, complaintData);
+    console.log("🔍 Full result from submitComplaint:", result);
+
+    if (result.success) {
+    console.log("SUCCESS! Complaint saved with ID:", result.id);
+
+    // Show success toast with complaint ID and timestamp
+    Toast.show({
+      type: 'success',
+      text1: 'Complaint saved successfully...',
+      text2: `Complaint ID: ${result.id} • ${formatDate(new Date())}`,
+      visibilityTime: 6000,     
+      position: 'top',
+      topOffset: 60,
+    });    
+    } else {
+      console.log("❌ Submission failed:", result.error);
+
+      // Show error toast with error message
+      Toast.show({
+        type: 'error',
+        text1: 'Failed to save complaint',
+        text2: result.error,
+        visibilityTime: 6000,     
+        position: 'top',
+        topOffset: 60,
+      });
     }
+  } catch (err: any) {
+    console.error("🚨 Unexpected error in handleSubmit:", err);
+    Alert.alert(
+      "Unexpected Error",
+      err.message || "An unexpected error occurred while submitting your complaint. Please try again."
+    );
+  } finally {
+    setIsSubmitting(false);
+  }
 
-    if (!title.trim() || !description.trim() || !selectedType) {
-      Alert.alert("Error", "Title, description and type are required");
-      return;
-    }
-
-    setIsSubmitting(true);
-
-    try {
-      const complaintData = {
-        title: title.trim(),
-        description: description.trim(),
-        type: selectedType,
-        location: location.trim() || null,
-        priority,
-        date: date.toISOString(),
-        images,     // we'll fix this later – local URIs won't work
-        video,
-        status: "pending",
-      };
-
-      console.log("Submitting data:", complaintData);
-
-      const result = await submitComplaint(user.uid, complaintData);
-
-      if (result.success) {
-        Alert.alert("Success", "Complaint submitted! ID: " + result.id);
-        // Optional: reset form or navigate away
-      } else {
-        Alert.alert("Error", result.error || "Failed to submit");
-      }
-    } catch (err: any) {
-      console.error("Submit error:", err);
-      Alert.alert("Error", "Unexpected issue: " + err.message);
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
+  // Reset form after submission
+  setTitle("");
+  setDescription("");
+  setSelectedType("");
+  setImages([]);
+  setVideo(null);
+  setLocation("");
+  setPriority("medium");
+  setDate(new Date());
+};
   
 
   return (

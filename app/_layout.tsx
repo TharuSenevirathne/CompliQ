@@ -7,6 +7,7 @@ import { MaterialIcons } from "@expo/vector-icons";
 import { useEffect } from "react";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { useAuth } from "@/hooks/useAuth";
+import Toast from "react-native-toast-message";
 
 // Prevent the splash screen from auto-hiding while we check auth state and load fonts
 SplashScreen.preventAutoHideAsync();
@@ -34,6 +35,7 @@ const RootLayout = () => {
       <SafeAreaView style={{ flex: 1 }}>
         <AuthFlowManager />
         <Slot />
+        <Toast />
       </SafeAreaView>
     </AuthProvider>
   );

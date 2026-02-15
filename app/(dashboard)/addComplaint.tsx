@@ -7,11 +7,11 @@ import DateTimePicker from '@react-native-community/datetimepicker'
 import { submitComplaint } from "@/services/complaintService"
 import { useAuth } from "@/hooks/useAuth"
 import Toast from 'react-native-toast-message';
+import { serverTimestamp } from "firebase/firestore";
 
 const AddComplaint = () => {
 
-  const { user} = useAuth() // Get current user
-  
+  const { user} = useAuth() 
   const [title, setTitle] = useState("")
   const [description, setDescription] = useState("")
   const [selectedType, setSelectedType] = useState("")
@@ -57,43 +57,61 @@ const AddComplaint = () => {
     }
   }
 
-  //  TAKE PHOTO FROM CAMERA ---
-  const takePhoto = async () => {
-    const { status } = await ImagePicker.requestCameraPermissionsAsync()
-    
-    if (status === 'granted') {
-      const result = await ImagePicker.launchCameraAsync({
-        quality: 1,
-      })
-      
-      if (!result.canceled && result.assets) {
-        setImages([...images, result.assets[0].uri])
-      }
-    } else {
-      Alert.alert("Permission Denied", "We need camera access to take photos.")
-    }
-  }
+  // Helper function to convert uri to base64
+const uriToBase64 = async (uri: string): Promise<string> => {
+  const response = await fetch(uri);
+  const blob = await response.blob();
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result as string);
+    reader.onerror = reject;
+    reader.readAsDataURL(blob);
+  });
+};
 
-  // PICK IMAGE FROM GALLERY ---
-  const pickImage = async () => {
-   const result = await ImagePicker.launchImageLibraryAsync({
+// pickImage update කරන්න
+const pickImage = async () => {
+  const result = await ImagePicker.launchImageLibraryAsync({
     mediaTypes: ImagePicker.MediaTypeOptions.Images,
     allowsMultipleSelection: true,
     quality: 1,
   });
 
+  if (!result.canceled && result.assets) {
+    const newImages: string[] = [];
+
+    for (const asset of result.assets) {
+      try {
+        const base64 = await uriToBase64(asset.uri);
+        newImages.push(base64);
+      } catch (err) {
+        console.error("Base64 conversion failed:", err);
+      }
+    }
+
+    const totalImages = [...images, ...newImages];
+
+    if (totalImages.length > 3) {
+      Alert.alert("Image Limit", "Maximum 3 images allowed.");
+      setImages(totalImages.slice(0, 3));
+    } else {
+      setImages(totalImages);
+    }
+  }
+};
+
+// TAKE PHOTO WITH CAMERA ---
+  const takePhoto = async () => {
+    const result = await ImagePicker.launchCameraAsync({
+      quality: 1,
+    });
+
     if (!result.canceled && result.assets) {
-      const newImages = result.assets.map(asset => asset.uri);
-      const totalImages = [...images, ...newImages];
-      
-      if (totalImages.length > 3) {
-        Alert.alert(
-          "Image Limit", 
-          "You can only upload maximum 3 images. First 3 images will be selected."
-        );
-        setImages(totalImages.slice(0, 3));
-      } else {
-        setImages(totalImages);
+      try {
+        const base64 = await uriToBase64(result.assets[0].uri);
+        setImages([...images, base64]);
+      } catch (err) {
+        console.error("Base64 conversion failed:", err);
       }
     }
   };
@@ -138,8 +156,7 @@ const AddComplaint = () => {
   // SUBMIT COMPLAINT ---
   const handleSubmit = async () => {
 
-  // Basic validation
-  if (!user?.uid) {
+    if (!user?.uid) {
     Alert.alert("Not logged in", "Please login again");
     return;
   }
@@ -149,31 +166,30 @@ const AddComplaint = () => {
     Alert.alert("Error", "Title, description and type are required");
     return;
   }
-  // Prevent multiple submissions
   setIsSubmitting(true);
 
   try {
     // Prepare complaint data
-    const complaintData = {
-      title: title.trim(),
-      description: description.trim(),
-      type: selectedType,
-      location: location.trim() || null,
-      priority,
-      date: date.toISOString(),
-      images,
-      video,
-      status: "pending",
-    };
+   const complaintData = {
+  title: title.trim(),
+  description: description.trim(),
+  type: selectedType,
+  location: location.trim() || null,
+  priority,
+  images,
+  video,
+  status: "pending",
+  userId: user?.uid,
+  createdAt: serverTimestamp(),
+};
 
-    console.log("📤 Submitting complaint with data:", complaintData);
+    console.log("Submitting complaint with data:", complaintData);
     const result = await submitComplaint(user.uid, complaintData);
-    console.log("🔍 Full result from submitComplaint:", result);
+    console.log(" Full result from submitComplaint:", result);
 
     if (result.success) {
     console.log("SUCCESS! Complaint saved with ID:", result.id);
 
-    // Show success toast with complaint ID and timestamp
     Toast.show({
       type: 'success',
       text1: 'Complaint saved successfully...',
@@ -183,9 +199,8 @@ const AddComplaint = () => {
       topOffset: 60,
     });    
     } else {
-      console.log("❌ Submission failed:", result.error);
+      console.log("Submission failed:", result.error);
 
-      // Show error toast with error message
       Toast.show({
         type: 'error',
         text1: 'Failed to save complaint',
@@ -196,7 +211,7 @@ const AddComplaint = () => {
       });
     }
   } catch (err: any) {
-    console.error("🚨 Unexpected error in handleSubmit:", err);
+    console.error(" Unexpected error in handleSubmit:", err);
     Alert.alert(
       "Unexpected Error",
       err.message || "An unexpected error occurred while submitting your complaint. Please try again."

@@ -8,6 +8,8 @@ import { db } from "@/services/firebase"
 const AdminHome = () => {
   const router = useRouter()
   const [loading, setLoading] = useState(true)
+  const [refreshing, setRefreshing] = useState(false)
+  
   const [stats, setStats] = useState({
     totalUsers: 0,
     totalComplaints: 0,
@@ -19,9 +21,13 @@ const AdminHome = () => {
   const [recentActivity, setRecentActivity] = useState<any[]>([])
 
   // Fetch all statistics
-  const fetchStats = async () => {
+  const fetchStats = async (isRefresh = false) => {
     try {
-      setLoading(true)
+      if (isRefresh) {
+        setRefreshing(true)
+      } else {
+        setLoading(true)
+      }
 
       // 1. Get all users count
       const usersRef = collection(db, 'users')
@@ -40,7 +46,6 @@ const AdminHome = () => {
 
       const today = new Date()
       today.setHours(0, 0, 0, 0)
-      const todayTimestamp = Timestamp.fromDate(today)
 
       complaintsSnapshot.forEach((doc) => {
         const data = doc.data()
@@ -54,8 +59,15 @@ const AdminHome = () => {
           resolved++
           
           // Check if resolved today
-          if (data.updatedAt && data.updatedAt.toDate() >= today) {
-            resolvedToday++
+          if (data.updatedAt) {
+            try {
+              const updatedDate = data.updatedAt.toDate()
+              if (updatedDate >= today) {
+                resolvedToday++
+              }
+            } catch (error) {
+              console.error('Error parsing date:', error)
+            }
           }
         }
       })
@@ -69,41 +81,71 @@ const AdminHome = () => {
         resolvedToday
       })
 
-      // 3. Get recent activity (last 5 complaints)
-      const recentComplaintsQuery = query(
-        complaintsRef,
-        orderBy('createdAt', 'desc'),
-        limit(5)
-      )
-      const recentSnapshot = await getDocs(recentComplaintsQuery)
+      // 3. Get recent activity (last 10 complaints)
+      try {
+        const recentComplaintsQuery = query(
+          complaintsRef,
+          orderBy('createdAt', 'desc'),
+          limit(10)
+        )
+        const recentSnapshot = await getDocs(recentComplaintsQuery)
 
-      const activities: any[] = []
-      recentSnapshot.forEach((doc) => {
-        const data = doc.data()
-        activities.push({
-          id: doc.id,
-          type: data.status === 'resolved' ? 'resolved' : data.status === 'in-progress' ? 'in-progress' : 'new',
-          message: data.status === 'resolved' 
-            ? `Complaint "${data.title}" marked as resolved`
-            : data.status === 'in-progress'
-            ? `Complaint "${data.title}" is in progress`
-            : `New complaint: "${data.title}"`,
-          timestamp: data.createdAt,
-          status: data.status
+        const activities: any[] = []
+        recentSnapshot.forEach((doc) => {
+          const data = doc.data()
+          
+          let activityMessage = ''
+          let activityType = 'new'
+          
+          if (data.status === 'resolved') {
+            activityMessage = `Complaint "${data.title}" marked as resolved`
+            activityType = 'resolved'
+          } else if (data.status === 'in-progress') {
+            activityMessage = `Complaint "${data.title}" is in progress`
+            activityType = 'in-progress'
+          } else {
+            activityMessage = `New complaint: "${data.title}"`
+            activityType = 'new'
+          }
+
+          activities.push({
+            id: doc.id,
+            type: activityType,
+            message: activityMessage,
+            timestamp: data.createdAt,
+            status: data.status,
+            title: data.title
+          })
         })
-      })
 
-      setRecentActivity(activities)
-      setLoading(false)
+        setRecentActivity(activities)
+      } catch (error) {
+        console.error('Error fetching recent activity:', error)
+        setRecentActivity([])
+      }
+
+      if (isRefresh) {
+        setRefreshing(false)
+      } else {
+        setLoading(false)
+      }
     } catch (error) {
       console.error('Error fetching admin stats:', error)
-      setLoading(false)
+      if (isRefresh) {
+        setRefreshing(false)
+      } else {
+        setLoading(false)
+      }
     }
   }
 
   useEffect(() => {
     fetchStats()
   }, [])
+
+  const handleRefresh = () => {
+    fetchStats(true)
+  }
 
   const getTimeAgo = (timestamp: any) => {
     if (!timestamp) return 'Just now'
@@ -153,13 +195,20 @@ const AdminHome = () => {
         <View className="flex-row items-center justify-between">
           <View>
             <Text className="text-gray-900 text-3xl font-bold">Admin Dashboard</Text>
-            <Text className="text-blue-600 text-base mt-1 font-medium">Overview & Management</Text>
+            <Text className="text-blue-600 text-base mt-1 font-medium">
+              Overview & Management
+            </Text>
           </View>
           <TouchableOpacity
-            onPress={fetchStats}
+            onPress={handleRefresh}
+            disabled={refreshing}
             className="w-12 h-12 rounded-2xl bg-blue-600 items-center justify-center"
           >
-            <MaterialIcons name="refresh" size={28} color="white" />
+            {refreshing ? (
+              <ActivityIndicator size="small" color="white" />
+            ) : (
+              <MaterialIcons name="refresh" size={28} color="white" />
+            )}
           </TouchableOpacity>
         </View>
       </View>
@@ -202,6 +251,19 @@ const AdminHome = () => {
 
         {/* Additional Stats Row */}
         <View className="flex-row justify-between mb-4">
+          <View className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100 flex-1 mr-2">
+            <View className="flex-row items-center justify-between">
+              <View>
+                <Text className="text-gray-500 text-xs font-medium">In Progress</Text>
+                <Text className="text-gray-900 text-2xl font-bold mt-1">
+                  {stats.inProgressComplaints}
+                </Text>
+              </View>
+              <View className="w-10 h-10 rounded-xl bg-blue-50 items-center justify-center">
+                <MaterialIcons name="hourglass-empty" size={20} color="#3b82f6" />
+              </View>
+            </View>
+          </View>
 
           <View className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100 flex-1 ml-2">
             <View className="flex-row items-center justify-between">
@@ -262,7 +324,10 @@ const AdminHome = () => {
           <View className="flex-row items-center justify-between mb-4">
             <Text className="text-gray-900 text-lg font-bold">Recent Activity</Text>
             {recentActivity.length > 0 && (
-              <Text className="text-blue-600 text-xs font-medium">Live</Text>
+              <View className="flex-row items-center">
+                <View className="w-2 h-2 rounded-full bg-green-500 mr-2 animate-pulse" />
+                <Text className="text-green-600 text-xs font-bold">LIVE</Text>
+              </View>
             )}
           </View>
           

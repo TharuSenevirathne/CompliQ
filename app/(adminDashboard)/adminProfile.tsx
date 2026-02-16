@@ -6,6 +6,7 @@ import { signOut, onAuthStateChanged, updateProfile,updateEmail,updatePassword,r
 import { collection, getDocs, doc, getDoc, updateDoc } from 'firebase/firestore';
 import { useRouter } from 'expo-router';
 import * as ImagePicker from 'expo-image-picker';
+import { Toast } from 'react-native-toast-message/lib/src/Toast';
 
 const AdminProfile = () => {
   const router = useRouter();
@@ -233,27 +234,28 @@ const AdminProfile = () => {
     }
   };
 
-  const handleLogout = () => {
-    Alert.alert(
-      'Logout',
-      'Are you sure you want to logout from admin panel?',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Logout',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              await signOut(auth);
-              router.replace('/(auth)/login');
-            } catch (error: any) {
-              Alert.alert('Logout Failed', error.message);
-            }
-          }
-        }
-      ]
-    );
-  };
+const handleLogout = () => {
+  Toast.show({
+    type: 'info',
+    text1: 'Confirm Logout',
+    text2: 'Tap to logout from admin panel',
+    visibilityTime: 5000,
+    position: 'top',
+    onPress: async () => {
+      try {
+        await signOut(auth);
+        Toast.show({ type: 'success', text1: 'Logged Out' });
+        router.replace('/(auth)/login');
+      } catch (error: any) {
+        Toast.show({
+          type: 'error',
+          text1: 'Logout Failed',
+          text2: error.message,
+        });
+      }
+    },
+  });
+};
 
   const handleRefresh = async () => {
     await fetchSystemStats();

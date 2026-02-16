@@ -1,36 +1,38 @@
-import { View, Text, TextInput, Pressable, TouchableOpacity, Keyboard, Alert } from "react-native"
-import React from "react"
+import { View, Text, TextInput, Pressable, TouchableOpacity, Keyboard, Alert, ActivityIndicator } from "react-native"
+import React, { useState } from "react"
 import { useRouter } from "expo-router"
-import { useState } from "react"
-import { useLoader } from "@/hooks/useLoader"
-import { login } from "@/services/authService"
+import { login, signInWithGoogle } from "@/services/authService"
 import { doc, getDoc } from "firebase/firestore"
 import { db } from "@/services/firebase"
+import { MaterialIcons } from "@expo/vector-icons"
+import { FontAwesome } from '@expo/vector-icons';
 
-// Login Screen Component
+
 const Login = () => {
   const router = useRouter()
-
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
-  const { showLoader, hideLoader, isLoading } = useLoader()
+  const [isLoading, setIsLoading] = useState(false)
+  const [showPassword, setShowPassword] = useState(false)
 
-  // Handle Login Button Press
+  // Handle Email/Password Login
   const handleLogin = async () => {
-    if (!email || !password || isLoading) {
-      Alert.alert("Please enter email and password..!!");
+    if (!email || !password) {
+      Alert.alert("Error", "Please enter email and password");
       return;
     }
 
-    showLoader();
+    if (isLoading) return;
+
+    setIsLoading(true);
     try {
       const userCredential = await login(email, password);
       const currentUser = userCredential.user;
 
-      console.log("Login success - UID:", currentUser.uid);
-      console.log("Login success - Email:", currentUser.email);
+      console.log("✅ Login success - UID:", currentUser.uid);
+      console.log("✅ Login success - Email:", currentUser.email);
 
-      // check user role from Firestore
+      // Check user role from Firestore
       const userDocRef = doc(db, "users", currentUser.uid);
       const userDocSnap = await getDoc(userDocRef);
 
@@ -38,28 +40,79 @@ const Login = () => {
         const userData = userDocSnap.data();
         const role = userData?.role;
 
-        console.log("Role from Firestore:", role);
+        console.log("🔵 Role from Firestore:", role);
 
         if (role === "admin") {
-          console.log("Redirecting ADMIN");
+          console.log("🔵 Redirecting to ADMIN dashboard");
           router.replace("/(adminDashboard)/adminHome");
         } else {
-          console.log("Redirecting USER");
+          console.log("🔵 Redirecting to USER dashboard");
           router.replace("/(dashboard)/userHome");
         }
       } else {
-        console.log("No user document found → fallback to user home");
+        console.log("⚠️ No user document found → defaulting to user home");
         router.replace("/(dashboard)/userHome");
       }
-    } catch (error) {
-      let message = "Login failed. Please try again.";
-      if (error instanceof Error) {
+    } catch (error: any) {
+      console.error("❌ Login error:", error);
+      let message = "Login failed. Please check your credentials.";
+      
+      if (error.code === 'auth/invalid-email') {
+        message = "Invalid email address";
+      } else if (error.code === 'auth/user-not-found') {
+        message = "No account found with this email";
+      } else if (error.code === 'auth/wrong-password') {
+        message = "Incorrect password";
+      } else if (error.code === 'auth/invalid-credential') {
+        message = "Invalid email or password";
+      } else if (error.message) {
         message = error.message;
       }
-      console.error("Login error:", error);
-      Alert.alert("Login failed", message);
+      
+      Alert.alert("Login Failed", message);
     } finally {
-      hideLoader();
+      setIsLoading(false);
+    }
+  };
+
+  // Handle Google Login
+  const handleGoogleLogin = async () => {
+    if (isLoading) return;
+
+    setIsLoading(true);
+    try {
+      const result = await signInWithGoogle();
+      
+      if (result) {
+        console.log("✅ Google login success - UID:", result.user.uid);
+
+        // Check user role from Firestore
+        const userDocRef = doc(db, "users", result.user.uid);
+        const userDocSnap = await getDoc(userDocRef);
+
+        if (userDocSnap.exists()) {
+          const userData = userDocSnap.data();
+          const role = userData?.role;
+
+          console.log("🔵 Role from Firestore:", role);
+
+          if (role === "admin") {
+            console.log("🔵 Redirecting to ADMIN dashboard");
+            router.replace("/(adminDashboard)/adminHome");
+          } else {
+            console.log("🔵 Redirecting to USER dashboard");
+            router.replace("/(dashboard)/userHome");
+          }
+        } else {
+          console.log("⚠️ No user document → creating and redirecting to user home");
+          router.replace("/(dashboard)/userHome");
+        }
+      }
+    } catch (error: any) {
+      console.error("❌ Google login error:", error);
+      Alert.alert("Google Login Failed", error.message || "Please try again");
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -74,7 +127,6 @@ const Login = () => {
         <View className="flex-1 justify-center items-center px-8">
           {/* Header with Logo */}
           <View className="items-center mb-10">
-            {/* Icon/Badge */}
             <View className="w-20 h-20 rounded-3xl bg-blue-600 justify-center items-center mb-5 shadow-lg">
               <Text className="text-white text-4xl font-bold">C</Text>
             </View>
@@ -102,6 +154,7 @@ const Login = () => {
                 autoCapitalize="none"
                 value={email}
                 onChangeText={setEmail}
+                editable={!isLoading}
               />
             </View>
 
@@ -110,53 +163,84 @@ const Login = () => {
               <Text className="text-gray-700 text-sm font-semibold mb-2 ml-1">
                 Password
               </Text>
-              <TextInput
-                placeholder="Enter your password"
-                placeholderTextColor="#9CA3AF"
-                className="border-2 border-gray-200 bg-gray-50 p-4 rounded-xl text-gray-900"
-                secureTextEntry
-                value={password}
-                onChangeText={setPassword}
-              />
+              <View className="relative">
+                <TextInput
+                  placeholder="Enter your password"
+                  placeholderTextColor="#9CA3AF"
+                  className="border-2 border-gray-200 bg-gray-50 p-4 rounded-xl text-gray-900 pr-12"
+                  secureTextEntry={!showPassword}
+                  value={password}
+                  onChangeText={setPassword}
+                  editable={!isLoading}
+                />
+                <TouchableOpacity
+                  onPress={() => setShowPassword(!showPassword)}
+                  className="absolute right-4 top-4"
+                  disabled={isLoading}
+                >
+                  <MaterialIcons
+                    name={showPassword ? "visibility" : "visibility-off"}
+                    size={24}
+                    color="#9CA3AF"
+                  />
+                </TouchableOpacity>
+              </View>
             </View>
 
             {/* Login Button */}
-            <Pressable
-              className="bg-blue-600 px-6 py-4 rounded-xl mb-4 shadow-md active:bg-blue-700"
+            <TouchableOpacity
+              className={`bg-blue-600 px-6 py-4 rounded-xl mb-4 shadow-md ${
+                isLoading ? 'opacity-70' : 'active:bg-blue-700'
+              }`}
               onPress={handleLogin}
               disabled={isLoading}
             >
-              <Text className="text-white text-lg text-center font-bold">
-                {isLoading ? "Logging in..." : "Login"}
-              </Text>
-            </Pressable>
+              {isLoading ? (
+                <View className="flex-row items-center justify-center">
+                  <ActivityIndicator color="white" size="small" />
+                  <Text className="text-white text-lg font-bold ml-2">Logging in...</Text>
+                </View>
+              ) : (
+                <Text className="text-white text-lg text-center font-bold">Login</Text>
+              )}
+            </TouchableOpacity>
 
             {/* Divider */}
             <View className="flex-row items-center my-4">
               <View className="flex-1 h-px bg-gray-200" />
-              <Text className="mx-4 text-gray-400 text-sm">or</Text>
+              <Text className="mx-4 text-gray-400 text-sm">or continue with</Text>
               <View className="flex-1 h-px bg-gray-200" />
             </View>
 
+            {/* Google Login Button */}
+            <TouchableOpacity
+              onPress={handleGoogleLogin}
+              disabled={isLoading}
+              className={`bg-white border-2 border-gray-200 py-4 rounded-xl flex-row justify-center items-center mb-4 ${
+                isLoading ? 'opacity-70' : ''
+              }`}
+            >
+              <FontAwesome name="google" size={24} color="#DB4437" />
+              <Text className="ml-3 font-semibold text-base text-gray-700">
+                Continue with Google
+              </Text>
+            </TouchableOpacity>
+
             {/* Register Link */}
-            <View className="flex-row justify-center">
+            <View className="flex-row justify-center mt-2">
               <Text className="text-gray-600 text-base">Don't have an account? </Text>
               <TouchableOpacity
-                onPress={() => {
-                  router.push("/register")
-                }}
+                onPress={() => router.push("/register")}
+                disabled={isLoading}
               >
-                <Text className="font-bold text-red-600 text-base">
-                  Register
-                </Text>
+                <Text className="font-bold text-blue-600 text-base">Register</Text>
               </TouchableOpacity>
             </View>
           </View>
         </View>
-        <br /><br></br><br></br>
 
         {/* Footer */}
-        <View className="absolute bottom-8 self-center items-center">
+        <View className="pb-8 items-center">
           <View className="flex-row items-center">
             <View className="w-2 h-2 rounded-full bg-blue-600 mr-2" />
             <Text className="text-gray-400 text-xs font-medium tracking-wide">

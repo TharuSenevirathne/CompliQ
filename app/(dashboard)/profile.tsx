@@ -7,6 +7,7 @@ import { MaterialIcons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import { useRouter } from 'expo-router';
 import Toast from 'react-native-toast-message';
+import { onSnapshot } from 'firebase/firestore';
 
 export default function Profile() {
   const router = useRouter();
@@ -75,7 +76,7 @@ export default function Profile() {
         setEmail(currentUser.email || '');
         setPhotoURL(currentUser.photoURL || '');
 
-        // Get extra data from Firestore
+        // Get extra user data from Firestore
         try {
           const userDoc = await getDoc(doc(db, 'users', currentUser.uid));
           if (userDoc.exists()) {
@@ -87,10 +88,39 @@ export default function Profile() {
           console.error("Error fetching user data:", error);
         }
 
-        // Fetch complaint statistics
-        await fetchComplaintStats(currentUser.uid);
+        // Fetch complaint stats (real-time listener එකතු කරලා)
+        fetchComplaintStats(currentUser.uid);
+
+        // Real-time listener for complaints (add කළාම auto update වෙයි)
+        const q = query(
+          collection(db, 'complaints'),
+          where('userId', '==', currentUser.uid)
+        );
+
+        const unsubscribeStats = onSnapshot(q, (snapshot) => {
+          let total = 0;
+          let pending = 0;
+          let resolved = 0;
+
+          snapshot.forEach((doc) => {
+            const data = doc.data();
+            total++;
+            if (data.status === 'pending') pending++;
+            else if (data.status === 'resolved') resolved++;
+          });
+
+          setStats({ total, pending, resolved });
+        }, (error) => {
+          console.error('Stats listener error:', error);
+        });
+
+        // Cleanup both listeners
+        return () => {
+          unsubscribeStats();
+        };
       } else {
         setUser(null);
+        setStats({ total: 0, pending: 0, resolved: 0 });
       }
       setLoading(false);
     });

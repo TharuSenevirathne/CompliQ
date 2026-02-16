@@ -5,6 +5,7 @@ import { useRouter } from "expo-router"
 import { useAuth } from "@/hooks/useAuth"
 import { collection, query, where, getDocs } from "firebase/firestore"
 import { db } from "@/services/firebase"
+import { onSnapshot } from "firebase/firestore";
 
 const UserHome = () => {
   const router = useRouter()
@@ -21,16 +22,17 @@ const UserHome = () => {
 
   // Fetch user's complaint statistics and recent complaints
   useEffect(() => {
+    if (!user?.uid) {
+      setLoading(false)
+      setStats({ totalComplaints: 0, pending: 0, resolved: 0 })
+      setRecentComplaints([])
+      return
+    }
+
     const fetchData = async () => {
-      if (!user) {
-        setLoading(false)
-        return
-      }
+      setLoading(true)
 
       try {
-        setLoading(true)
-
-        // Query all complaints for this user
         const complaintsRef = collection(db, 'complaints')
         const q = query(complaintsRef, where('userId', '==', user.uid))
         const querySnapshot = await getDocs(q)
@@ -42,30 +44,16 @@ const UserHome = () => {
 
         querySnapshot.forEach((doc) => {
           const data = doc.data()
-          const complaint = {
-            id: doc.id,
-            ...data
-          }
-          
+          const complaint = { id: doc.id, ...data }
           allComplaints.push(complaint)
           total++
-          
-          if (data.status === 'pending') {
-            pending++
-          } else if (data.status === 'resolved') {
-            resolved++
-          }
+          if (data.status === 'pending') pending++
+          else if (data.status === 'resolved') resolved++
         })
 
-        // Update stats
-        setStats({
-          totalComplaints: total,
-          pending,
-          resolved
-        })
+        setStats({ totalComplaints: total, pending, resolved })
 
-        // Get recent 3 complaints (sorted by createdAt)
-        const sortedComplaints = allComplaints
+        const sorted = allComplaints
           .sort((a, b) => {
             const dateA = a.createdAt?.toDate?.() || new Date(0)
             const dateB = b.createdAt?.toDate?.() || new Date(0)
@@ -73,16 +61,16 @@ const UserHome = () => {
           })
           .slice(0, 3)
 
-        setRecentComplaints(sortedComplaints)
-        setLoading(false)
+        setRecentComplaints(sorted)
       } catch (error) {
         console.error('Error fetching complaints:', error)
+      } finally {
         setLoading(false)
       }
     }
 
     fetchData()
-  }, [user])
+  }, [user])  // user change උනාම auto re-run
 
   const getStatusColor = (status: string) => {
     switch(status) {

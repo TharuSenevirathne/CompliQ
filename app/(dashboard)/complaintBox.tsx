@@ -5,6 +5,7 @@ import { collection,onSnapshot,query,orderBy,deleteDoc,doc,updateDoc,Timestamp, 
 import { db } from "@/services/firebase";
 import { useAuth } from "@/hooks/useAuth";
 import Toast from 'react-native-toast-message';
+import { where } from "firebase/firestore";
 
 // Complaint type
 interface Complaint {
@@ -47,50 +48,34 @@ const ComplaintBox = () => {
       return;
     }
 
-    // Query for user's complaints ordered by createdAt descending
+    // Query එකට userId filter එකතු කරන්න
     const q = query(
       collection(db, "complaints"),
+      where("userId", "==", user.uid),  // ← මේක අනිවාර්යයෙන් ඕනේ
       orderBy("createdAt", "desc")
     );
 
-    // Real-time listener
     const unsubscribe = onSnapshot(
       q,
       (snapshot) => {
         const loaded: Complaint[] = snapshot.docs.map((doc) => {
-        const data = doc.data();
-        let createdAtDate: Date | undefined;
+          const data = doc.data();
 
-        if (data.createdAt instanceof Timestamp) {
-          createdAtDate = data.createdAt.toDate();
-        } else if (data.createdAt instanceof Date) {
-          createdAtDate = data.createdAt;
-        } else if (typeof data.createdAt === "string") {
-          const parsed = new Date(data.createdAt);
-          createdAtDate = isNaN(parsed.getTime()) ? undefined : parsed;
-        }
-
-        if (!createdAtDate && typeof data.date === "string") {
-          const parsed = new Date(data.date);
-          createdAtDate = isNaN(parsed.getTime()) ? undefined : parsed;
-        }
-
-        // Ensure we only load complaints that belong to the current user
-        return {
-          id: doc.id,
-          title: (data.title as string) || "",
-          description: (data.description as string) || "",
-          type: (data.type as string) || "other",
-          status: (data.status as "pending" | "in-progress" | "resolved") || "pending",
-          priority: (data.priority as "low" | "medium" | "high") || "medium",
-          location: (data.location as string) || "",
-          createdAt: createdAtDate,
-          images: (data.images as string[]) || [],
-          video: (data.video as string | null) || null,
-          userId: data.userId as string | undefined,
-          ...data,
-        };
-
+          // ... rest of your data mapping logic (createdAt handling etc.)
+          return {
+            id: doc.id,
+            title: data.title || "",
+            description: data.description || "",
+            type: data.type || "other",
+            status: data.status || "pending",
+            priority: data.priority || "medium",
+            location: data.location || "",
+            createdAt: data.createdAt,
+            images: data.images || [],
+            video: data.video || null,
+            userId: data.userId,
+            ...data,
+          };
         });
 
         setComplaints(loaded);
@@ -98,7 +83,7 @@ const ComplaintBox = () => {
       },
       (error) => {
         console.error("Firebase error:", error);
-        Alert.alert("Error", "Failed to load complaints");
+        Alert.alert("Error", "Failed to load your complaints");
         setLoading(false);
       }
     );

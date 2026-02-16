@@ -5,6 +5,8 @@ import AsyncStorage from "@react-native-async-storage/async-storage"
 import { GoogleAuthProvider,signInWithCredential,} from 'firebase/auth';
 import * as WebBrowser from 'expo-web-browser';
 import * as Google from 'expo-auth-session/providers/google';
+import { makeRedirectUri } from 'expo-auth-session';
+import { Alert } from "react-native";
 
 WebBrowser.maybeCompleteAuthSession();
 
@@ -45,16 +47,36 @@ export const logoutUser = async () => {
 }
 
 
-export const signInWithGoogle = async () => {
-  const [request, response, promptAsync] = Google.useIdTokenAuthRequest({
-    clientId: 'YOUR_GOOGLE_WEB_CLIENT_ID',   // Firebase Console එකෙන් ගන්න
-  });
+// export const signInWithGoogle = async () => {
+//   try {
+//     // Redirect URI හදන්න (useProxy ඕන නෑ)
+//     const redirect = makeRedirectUri();
 
-  if (request) {
-    const result = await promptAsync();
-    if (result?.type === 'success') {
-      const credential = GoogleAuthProvider.credential(result.params.id_token);
-      return await signInWithCredential(auth, credential);
-    }
-  }
-};
+//     const [request, response, promptAsync] = Google.useIdTokenAuthRequest({
+//       clientId: '994176820391-blkivvrrqufrgdoar1okvsqlnprjetek.apps.googleusercontent.com',
+//       redirectUri: redirect,
+//     });
+
+//     if (!request) {
+//       throw new Error("Couldn't create Google auth request");
+//     }
+
+//     const authResponse = await promptAsync();
+
+//     if (authResponse.type === 'success') {
+//       const idToken = authResponse.params.id_token;
+//       const credential = GoogleAuthProvider.credential(idToken);
+//       const userCredential = await signInWithCredential(auth, credential);
+      
+//       console.log('Google login success:', userCredential.user.email);
+//       return userCredential.user;
+//     } else {
+//       console.log('Google auth dismissed or failed:', authResponse.type);
+//       throw new Error('Google login was cancelled or failed');
+//     }
+//   } catch (error: any) {
+//     console.error('Google sign-in error:', error);
+//     Alert.alert('Google Login Failed', error.message || 'Please try again');
+//     throw error;
+//   }
+// };

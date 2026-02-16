@@ -368,7 +368,7 @@ const pickImage = async () => {
 
         {/* Media Upload */}
         <View className="bg-white rounded-2xl p-5 mb-4 shadow-sm border border-gray-100">
-          <Text className="text-gray-700 font-semibold text-sm mb-3">Attach Media (Optional)</Text>
+          <Text className="text-gray-700 font-semibold text-sm mb-3">Attach Media </Text>
           
           {/* Upload Buttons */}
           <View className="flex-row mb-4">

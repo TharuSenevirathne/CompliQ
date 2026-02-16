@@ -1,14 +1,22 @@
 import { View, Text, TextInput, Pressable, TouchableOpacity, Keyboard, Alert, ActivityIndicator } from "react-native"
 import React, { useState } from "react"
 import { useRouter } from "expo-router"
-import { login, signInWithGoogle } from "@/services/authService"
+import { login } from "@/services/authService"
+// import { signInWithGoogle } from "@/services/authService"
 import { doc, getDoc } from "firebase/firestore"
 import { db } from "@/services/firebase"
 import { MaterialIcons } from "@expo/vector-icons"
 import { FontAwesome } from '@expo/vector-icons';
-
+import * as Google from 'expo-auth-session/providers/google';
+import { GoogleAuthProvider, signInWithCredential } from 'firebase/auth';
+import { auth } from "@/services/firebase";
 
 const Login = () => {
+
+  const [request, response, promptAsync] = Google.useIdTokenAuthRequest({
+      clientId: '994176820391-blkivvrrqufrgdoar1okvsqlnprjetek.apps.googleusercontent.com',
+    });
+
   const router = useRouter()
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
@@ -76,45 +84,48 @@ const Login = () => {
   };
 
   // Handle Google Login
-  const handleGoogleLogin = async () => {
-    if (isLoading) return;
+  // const handleGoogleLogin = async () => {
+  //   if (isLoading) return;
+  //   if (!request) {
+  //     Alert.alert("Error", "Google login not ready yet. Try again.");
+  //     return;
+  //   }
 
-    setIsLoading(true);
-    try {
-      const result = await signInWithGoogle();
-      
-      if (result) {
-        console.log("✅ Google login success - UID:", result.user.uid);
+  //   setIsLoading(true);
+  //   try {
+  //     const authResponse = await promptAsync();
 
-        // Check user role from Firestore
-        const userDocRef = doc(db, "users", result.user.uid);
-        const userDocSnap = await getDoc(userDocRef);
+  //     if (authResponse.type === 'success') {
+  //       const idToken = authResponse.params.id_token;
+  //       const credential = GoogleAuthProvider.credential(idToken);
+  //       const userCredential = await signInWithCredential(auth, credential);
 
-        if (userDocSnap.exists()) {
-          const userData = userDocSnap.data();
-          const role = userData?.role;
+  //       console.log("Google login success:", userCredential.user.email);
 
-          console.log("🔵 Role from Firestore:", role);
+  //       // Role check කරලා redirect කරන්න
+  //       const userDocRef = doc(db, "users", userCredential.user.uid);
+  //       const userDoc = await getDoc(userDocRef);
 
-          if (role === "admin") {
-            console.log("🔵 Redirecting to ADMIN dashboard");
-            router.replace("/(adminDashboard)/adminHome");
-          } else {
-            console.log("🔵 Redirecting to USER dashboard");
-            router.replace("/(dashboard)/userHome");
-          }
-        } else {
-          console.log("⚠️ No user document → creating and redirecting to user home");
-          router.replace("/(dashboard)/userHome");
-        }
-      }
-    } catch (error: any) {
-      console.error("❌ Google login error:", error);
-      Alert.alert("Google Login Failed", error.message || "Please try again");
-    } finally {
-      setIsLoading(false);
-    }
-  };
+  //       if (userDoc.exists()) {
+  //         const role = userDoc.data()?.role;
+  //         if (role === "admin") {
+  //           router.replace("/(adminDashboard)/adminHome");
+  //         } else {
+  //           router.replace("/(dashboard)/userHome");
+  //         }
+  //       } else {
+  //         router.replace("/(dashboard)/userHome");
+  //       }
+  //     } else {
+  //       console.log("Google login dismissed:", authResponse.type);
+  //     }
+  //   } catch (error: any) {
+  //     console.error("Google login error:", error);
+  //     Alert.alert("Google Login Failed", error.message || "Please try again");
+  //   } finally {
+  //     setIsLoading(false);
+  //   }
+  // };
 
   return (
     <Pressable onPress={Keyboard.dismiss} accessible={false} className="flex-1">
@@ -208,12 +219,12 @@ const Login = () => {
             {/* Divider */}
             <View className="flex-row items-center my-4">
               <View className="flex-1 h-px bg-gray-200" />
-              <Text className="mx-4 text-gray-400 text-sm">or continue with</Text>
+              <Text className="mx-4 text-gray-400 text-sm">or</Text>
               <View className="flex-1 h-px bg-gray-200" />
             </View>
 
             {/* Google Login Button */}
-            <TouchableOpacity
+            {/* <TouchableOpacity
               onPress={handleGoogleLogin}
               disabled={isLoading}
               className={`bg-white border-2 border-gray-200 py-4 rounded-xl flex-row justify-center items-center mb-4 ${
@@ -224,7 +235,7 @@ const Login = () => {
               <Text className="ml-3 font-semibold text-base text-gray-700">
                 Continue with Google
               </Text>
-            </TouchableOpacity>
+            </TouchableOpacity> */}
 
             {/* Register Link */}
             <View className="flex-row justify-center mt-2">

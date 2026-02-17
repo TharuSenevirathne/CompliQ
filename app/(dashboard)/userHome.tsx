@@ -22,55 +22,56 @@ const UserHome = () => {
 
   // Fetch user's complaint statistics and recent complaints
   useEffect(() => {
-    if (!user?.uid) {
-      setLoading(false)
-      setStats({ totalComplaints: 0, pending: 0, resolved: 0 })
-      setRecentComplaints([])
-      return
-    }
+  if (!user?.uid) {
+    setLoading(false);
+    setStats({ totalComplaints: 0, pending: 0, resolved: 0 });
+    setRecentComplaints([]);
+    return;
+  }
 
-    const fetchData = async () => {
-      setLoading(true)
+  setLoading(true);
 
-      try {
-        const complaintsRef = collection(db, 'complaints')
-        const q = query(complaintsRef, where('userId', '==', user.uid))
-        const querySnapshot = await getDocs(q)
+  const complaintsRef = collection(db, 'complaints');
+  const q = query(complaintsRef, where('userId', '==', user.uid));
 
-        let total = 0
-        let pending = 0
-        let resolved = 0
-        const allComplaints: any[] = []
+  // Real-time listener
+  const unsubscribe = onSnapshot(q, (querySnapshot) => {
+    let total = 0;
+    let pending = 0;
+    let resolved = 0;
+    const allComplaints: any[] = [];
 
-        querySnapshot.forEach((doc) => {
-          const data = doc.data()
-          const complaint = { id: doc.id, ...data }
-          allComplaints.push(complaint)
-          total++
-          if (data.status === 'pending') pending++
-          else if (data.status === 'resolved') resolved++
-        })
+    querySnapshot.forEach((doc) => {
+      const data = doc.data();
+      const complaint = { id: doc.id, ...data };
+      allComplaints.push(complaint);
+      total++;
+      if (data.status === 'pending') pending++;
+      else if (data.status === 'resolved') resolved++;
+    });
 
-        setStats({ totalComplaints: total, pending, resolved })
+    setStats({ totalComplaints: total, pending, resolved });
 
-        const sorted = allComplaints
-          .sort((a, b) => {
-            const dateA = a.createdAt?.toDate?.() || new Date(0)
-            const dateB = b.createdAt?.toDate?.() || new Date(0)
-            return dateB.getTime() - dateA.getTime()
-          })
-          .slice(0, 3)
+    // Sort by createdAt descending & take latest 3
+    const sorted = allComplaints
+      .sort((a, b) => {
+        const dateA = a.createdAt?.toDate?.() || new Date(0);
+        const dateB = b.createdAt?.toDate?.() || new Date(0);
+        return dateB.getTime() - dateA.getTime();
+      })
+      .slice(0, 3);
 
-        setRecentComplaints(sorted)
-      } catch (error) {
-        console.error('Error fetching complaints:', error)
-      } finally {
-        setLoading(false)
-      }
-    }
+    setRecentComplaints(sorted);
 
-    fetchData()
-  }, [user])  
+    setLoading(false);
+  }, (error) => {
+    console.error('Firestore listener error:', error);
+    setLoading(false);
+  });
+
+  // Cleanup: unsubscribe when component unmounts or user changes
+  return () => unsubscribe();
+}, [user?.uid]);  
 
   const getStatusColor = (status: string) => {
     switch(status) {

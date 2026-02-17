@@ -57,6 +57,33 @@ const AddComplaint = () => {
     }
   }
 
+  // Permissions check helpers
+const requestCameraPermission = async () => {
+  const { status } = await ImagePicker.requestCameraPermissionsAsync();
+  if (status !== 'granted') {
+    Alert.alert(
+      "Camera Permission Required",
+      "This app needs access to your camera to take photos.",
+      [{ text: "OK", onPress: () => {} }]
+    );
+    return false;
+  }
+  return true;
+};
+
+const requestMediaLibraryPermission = async () => {
+  const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+  if (status !== 'granted') {
+    Alert.alert(
+      "Gallery Access Required",
+      "This app needs access to your photos and videos.",
+      [{ text: "OK", onPress: () => {} }]
+    );
+    return false;
+  }
+  return true;
+};
+
   // Helper function to convert uri to base64
 const uriToBase64 = async (uri: string): Promise<string> => {
   const response = await fetch(uri);
@@ -69,64 +96,59 @@ const uriToBase64 = async (uri: string): Promise<string> => {
   });
 };
 
-// pickImage update කරන්න
+// PICK IMAGE FROM GALLERY ---
 const pickImage = async () => {
+  const hasPermission = await requestMediaLibraryPermission();
+  if (!hasPermission) return;
+
   const result = await ImagePicker.launchImageLibraryAsync({
     mediaTypes: ImagePicker.MediaTypeOptions.Images,
     allowsMultipleSelection: true,
-    quality: 1,
+    quality: 0.7,  
   });
 
   if (!result.canceled && result.assets) {
-    const newImages: string[] = [];
+    const newUris = result.assets.map(asset => asset.uri);
+    const total = [...images, ...newUris];
 
-    for (const asset of result.assets) {
-      try {
-        const base64 = await uriToBase64(asset.uri);
-        newImages.push(base64);
-      } catch (err) {
-        console.error("Base64 conversion failed:", err);
-      }
-    }
-
-    const totalImages = [...images, ...newImages];
-
-    if (totalImages.length > 3) {
+    if (total.length > 3) {
       Alert.alert("Image Limit", "Maximum 3 images allowed.");
-      setImages(totalImages.slice(0, 3));
+      setImages(total.slice(0, 3));
     } else {
-      setImages(totalImages);
+      setImages(total);
     }
   }
 };
 
 // TAKE PHOTO WITH CAMERA ---
-  const takePhoto = async () => {
-    const result = await ImagePicker.launchCameraAsync({
-      quality: 1,
-    });
+const takePhoto = async () => {
+  const hasPermission = await requestCameraPermission();
+  if (!hasPermission) return;
 
-    if (!result.canceled && result.assets) {
-      try {
-        const base64 = await uriToBase64(result.assets[0].uri);
-        setImages([...images, base64]);
-      } catch (err) {
-        console.error("Base64 conversion failed:", err);
-      }
-    }
-  };
+  const result = await ImagePicker.launchCameraAsync({
+    quality: 0.7,         
+    allowsEditing: false,
+  });
+
+  if (!result.canceled && result.assets) {
+    setImages([...images, result.assets[0].uri]);
+  }
+};
 
   // PICK VIDEO FROM GALLERY ---
-  const pickVideo = async () => {
-    const result = await ImagePicker.launchImageLibraryAsync({
+ const pickVideo = async () => {
+  const hasPermission = await requestMediaLibraryPermission();
+  if (!hasPermission) return;
+
+  const result = await ImagePicker.launchImageLibraryAsync({
     mediaTypes: ImagePicker.MediaTypeOptions.Videos,
     quality: 1,
   });
 
-    if (!result.canceled && result.assets) {
-      setVideo(result.assets[0].uri);
-    }
-  };
+  if (!result.canceled && result.assets) {
+    setVideo(result.assets[0].uri);
+  }
+};
 
   // SAVE IMAGE TO DEVICE GALLERY ---
   const saveImageToGallery = async (imageUri: string) => {
@@ -152,6 +174,8 @@ const pickImage = async () => {
   const removeImage = (index: number) => {
     setImages(images.filter((_, i) => i !== index))
   }
+
+  
 
   // SUBMIT COMPLAINT ---
   const handleSubmit = async () => {

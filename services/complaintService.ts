@@ -38,6 +38,8 @@ const convertToBase64 = async (uri: string): Promise<string | null> => {
   }
 }
 
+
+
 // Submit complaint to Firestore
 export const submitComplaint = async (uid: string, data: any) => {
   try {

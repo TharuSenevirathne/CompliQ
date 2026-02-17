@@ -69,64 +69,60 @@ export default function Profile() {
 
   // User load
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
-      if (currentUser) {
-        setUser(currentUser);
-        setDisplayName(currentUser.displayName || '');
-        setEmail(currentUser.email || '');
-        setPhotoURL(currentUser.photoURL || '');
-
-        // Get extra user data from Firestore
-        try {
-          const userDoc = await getDoc(doc(db, 'users', currentUser.uid));
-          if (userDoc.exists()) {
-            const data = userDoc.data();
-            setDisplayName(data.displayName || currentUser.displayName || '');
-            setPhotoURL(data.photoURL || currentUser.photoURL || '');
-          }
-        } catch (error) {
-          console.error("Error fetching user data:", error);
-        }
-
-        // Fetch complaint stats (real-time listener එකතු කරලා)
-        fetchComplaintStats(currentUser.uid);
-
-        // Real-time listener for complaints (add කළාම auto update වෙයි)
-        const q = query(
-          collection(db, 'complaints'),
-          where('userId', '==', currentUser.uid)
-        );
-
-        const unsubscribeStats = onSnapshot(q, (snapshot) => {
-          let total = 0;
-          let pending = 0;
-          let resolved = 0;
-
-          snapshot.forEach((doc) => {
-            const data = doc.data();
-            total++;
-            if (data.status === 'pending') pending++;
-            else if (data.status === 'resolved') resolved++;
-          });
-
-          setStats({ total, pending, resolved });
-        }, (error) => {
-          console.error('Stats listener error:', error);
-        });
-
-        // Cleanup both listeners
-        return () => {
-          unsubscribeStats();
-        };
-      } else {
-        setUser(null);
-        setStats({ total: 0, pending: 0, resolved: 0 });
-      }
+  const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
+    if (!currentUser) {
+      setUser(null);
       setLoading(false);
-    });
+      return;
+    }
 
-    return () => unsubscribe();
-  }, []);
+    setLoading(true);
+
+    try {
+      // Basic auth user data
+      setUser(currentUser);
+      setDisplayName(currentUser.displayName || '');
+      setEmail(currentUser.email || '');
+      setPhotoURL(currentUser.photoURL || '');
+
+      // Firestore user data
+      console.log("Fetching user doc for UID:", currentUser.uid);
+      const userDocRef = doc(db, 'users', currentUser.uid);
+      const userDocSnap = await getDoc(userDocRef);
+
+      if (userDocSnap.exists()) {
+        const data = userDocSnap.data();
+        console.log("User doc data:", data);
+        setDisplayName(data.displayName || currentUser.displayName || '');
+        setPhotoURL(data.photoURL || currentUser.photoURL || '');
+      } else {
+        console.log("No user doc found in Firestore");
+      }
+
+      await fetchComplaintStats(currentUser.uid);
+
+      setLoading(false);
+    } catch (error: any) {
+      console.error("Profile load error:", {
+        code: error.code,
+        message: error.message,
+        stack: error.stack
+      });
+
+      let msg = "Failed to load profile.";
+      if (error.code === "permission-denied") {
+        msg = "Permission denied. You may not have access to this profile data.";
+      } else if (error.code === "unavailable") {
+        msg = "Network error. Please check your internet connection.";
+      }
+
+      Alert.alert("Profile Load Error", msg);
+      setLoading(false);
+    }
+  });
+
+  return () => unsubscribe();
+}, []);
 
   // Profile picture upload
   const pickImage = async () => {
@@ -203,7 +199,7 @@ export default function Profile() {
     type: 'info',
     text1: 'Confirm Logout',
     text2: 'Tap this message to logout',
-    visibilityTime: 5000, // 5 seconds
+    visibilityTime: 5000, 
     position: 'top',
     topOffset: 60,
     onPress: async () => {

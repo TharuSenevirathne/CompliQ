@@ -70,7 +70,7 @@ const UserHome = () => {
     }
 
     fetchData()
-  }, [user])  // user change උනාම auto re-run
+  }, [user])  
 
   const getStatusColor = (status: string) => {
     switch(status) {

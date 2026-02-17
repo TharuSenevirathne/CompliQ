@@ -108,7 +108,7 @@ const Analytics = () => {
         inProgress,
         resolved,
         totalUsers,
-        avgResolutionTime: 2.5, // Mock data - calculate from actual resolution times
+        avgResolutionTime: 2.5, 
         todayComplaints: todayCount,
         weekComplaints: weekCount,
         monthComplaints: monthCount

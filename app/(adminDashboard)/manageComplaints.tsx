@@ -385,8 +385,8 @@ const ManageComplaints = () => {
         transparent={true}
         onRequestClose={() => setShowDetailModal(false)}
       >
-        <View className="flex-1 bg-black/50 justify-end">
-          <View className="bg-white rounded-t-3xl max-h-[90%]">
+        <View className="flex-1 bg-black/50 justify-center height-[500px]">
+          <View className="bg-white ">
             <View className="flex-row items-center justify-between p-6 border-b border-gray-200 bg-blue-50">
               <Text className="text-gray-900 text-2xl font-bold">Complaint Details</Text>
               <TouchableOpacity 

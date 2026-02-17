@@ -50,12 +50,12 @@ function AuthFlowManager() {
     return null; 
   }
 
-  // No user → redirect to login page (replace to prevent back navigation)
+  // No user redirect to login page (replace to prevent back navigation)
   if (!user) {
     return <Redirect href="/(auth)/login" />; 
   }
 
-  // User is authenticated → render the app (Slot will render the current route)
+  // User is authenticated  render the app (Slot will render the current route)
   return null;
 }
 

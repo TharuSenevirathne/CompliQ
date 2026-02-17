@@ -48,10 +48,10 @@ const ComplaintBox = () => {
       return;
     }
 
-    // Query එකට userId filter එකතු කරන්න
+    // Query for user's complaints with real-time updates
     const q = query(
       collection(db, "complaints"),
-      where("userId", "==", user.uid),  // ← මේක අනිවාර්යයෙන් ඕනේ
+      where("userId", "==", user.uid),  
       orderBy("createdAt", "desc")
     );
 
@@ -61,7 +61,7 @@ const ComplaintBox = () => {
         const loaded: Complaint[] = snapshot.docs.map((doc) => {
           const data = doc.data();
 
-          // ... rest of your data mapping logic (createdAt handling etc.)
+          // Ensure we have all necessary fields with defaults
           return {
             id: doc.id,
             title: data.title || "",
@@ -160,7 +160,7 @@ const ComplaintBox = () => {
       position: 'top',
       topOffset: 60,
       onPress: () => {
-        // User tapped the toast → proceed with delete
+        // User tapped the toast to proceed with delete
         console.log("User confirmed delete via toast for ID:", id);
 
         deleteDoc(doc(db, "complaints", id))
